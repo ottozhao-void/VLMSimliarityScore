@@ -1,5 +1,6 @@
+
 const WORKER_CODE = `
-import { pipeline, env, AutoTokenizer, AutoProcessor, CLIPTextModelWithProjection, CLIPVisionModelWithProjection } from 'https://esm.sh/@xenova/transformers@2.17.2';
+import { env, AutoTokenizer, AutoProcessor, AutoModel } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
 
 // Setup environment for browser
 env.allowLocalModels = false;
@@ -7,8 +8,7 @@ env.useBrowserCache = true;
 
 // Globals to hold the loaded pipeline/models
 let processor = null;
-let textModel = null;
-let visionModel = null;
+let model = null;
 let tokenizer = null;
 let currentModelId = null;
 
@@ -38,11 +38,14 @@ self.addEventListener('message', async (event) => {
     const { modelId, useGpu } = data;
 
     try {
-      if (currentModelId === modelId && processor && textModel && visionModel) {
+      if (currentModelId === modelId && processor && model) {
         self.postMessage({ type: 'ready', data: { message: 'Model already loaded' } });
         return;
       }
 
+      // 1. Check/Configure Device
+      // Note: 'webgpu' requires browser support. If forced and not available, it might fail.
+      // AutoModel.from_pretrained usually falls back if device is not specified, but we are being specific.
       const device = useGpu ? 'webgpu' : 'wasm';
       
       // Callback for progress updates
@@ -52,20 +55,32 @@ self.addEventListener('message', async (event) => {
 
       self.postMessage({ type: 'progress', data: { status: 'initiate', name: modelId, file: 'config' } });
 
+      // 2. Load Tokenizer & Processor
       tokenizer = await AutoTokenizer.from_pretrained(modelId, { progress_callback: progressCallback });
       processor = await AutoProcessor.from_pretrained(modelId, { progress_callback: progressCallback });
       
-      textModel = await CLIPTextModelWithProjection.from_pretrained(modelId, { 
-        quantized: true, 
-        device,
-        progress_callback: progressCallback 
-      });
-      
-      visionModel = await CLIPVisionModelWithProjection.from_pretrained(modelId, { 
-        quantized: true, 
-        device,
-        progress_callback: progressCallback 
-      });
+      // 3. Load Model
+      // We wrap this to catch specific backend errors (like WebGPU missing)
+      try {
+        model = await AutoModel.from_pretrained(modelId, { 
+          quantized: true, 
+          device,
+          progress_callback: progressCallback 
+        });
+      } catch (e) {
+        // If WebGPU fails, try falling back to WASM if the user asked for GPU
+        if (useGpu) {
+          console.warn("WebGPU load failed, attempting WASM fallback...", e);
+          self.postMessage({ type: 'progress', data: { status: 'fallback', name: modelId, file: 'Falling back to CPU (WASM)...' } });
+          model = await AutoModel.from_pretrained(modelId, { 
+            quantized: true, 
+            device: 'wasm',
+            progress_callback: progressCallback 
+          });
+        } else {
+          throw e;
+        }
+      }
 
       currentModelId = modelId;
       self.postMessage({ type: 'ready', data: { message: 'Model loaded successfully' } });
@@ -77,7 +92,7 @@ self.addEventListener('message', async (event) => {
   } else if (type === 'run') {
     const { text, imageBlob } = data;
 
-    if (!processor || !textModel || !visionModel) {
+    if (!processor || !model) {
       self.postMessage({ type: 'error', data: { message: 'Model not loaded' } });
       return;
     }
@@ -85,13 +100,15 @@ self.addEventListener('message', async (event) => {
     try {
       const startTime = performance.now();
 
-      // 1. Process Text
+      // 1. Process Inputs
       const textInputs = tokenizer(text, { padding: true, truncation: true, return_tensors: 'pt' });
-      const { text_embeds } = await textModel(textInputs);
-      
-      // 2. Process Image
-      const imageInputs = await processor(imageBlob, { return_tensors: 'pt' });
-      const { image_embeds } = await visionModel(imageInputs);
+      const imageInputs = await processor(imageBlob);
+
+      // 2. Run Inference
+      const { text_embeds, image_embeds } = await model({
+        ...textInputs,
+        ...imageInputs
+      });
 
       // 3. Compute Similarity
       const textVec = text_embeds.data;

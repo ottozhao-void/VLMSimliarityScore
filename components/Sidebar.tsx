@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Settings, Cpu, Zap, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { DEFAULT_MODEL } from '../constants';
+import React from 'react';
+import { Settings, Cpu, Zap, Download, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
+import { DEFAULT_MODEL, PRESETS } from '../constants';
 import { cn } from '../utils';
 import { LoadingStatus, ProgressData } from '../types';
 
@@ -25,6 +25,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   progress,
   errorMessage,
 }) => {
+  const isCustom = !PRESETS.some(p => p.id === modelId);
+
+  const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value !== 'custom') {
+      setModelId(value);
+    } else {
+      // If switching to custom, keep current or clear if it was a preset
+      if (!isCustom) setModelId('');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-50 border-r border-gray-200 p-6 font-sans">
       <div className="flex items-center gap-2 mb-8">
@@ -39,22 +51,47 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="space-y-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Model Configuration</h2>
           
-          <div className="space-y-2">
-            <label htmlFor="model-id" className="text-sm font-medium text-gray-700 block">
-              Hugging Face Repo ID
-            </label>
-            <input
-              id="model-id"
-              type="text"
-              value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
-              placeholder={DEFAULT_MODEL}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-            />
-            <p className="text-xs text-gray-400">
-              Must be compatible with Transformers.js (ONNX). <br/>
-              Recommended: <code className="bg-gray-200 px-1 rounded text-gray-600">{DEFAULT_MODEL}</code>
-            </p>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="model-preset" className="text-sm font-medium text-gray-700 block mb-1">
+                Select Model
+              </label>
+              <div className="relative">
+                <select
+                  id="model-preset"
+                  value={isCustom ? 'custom' : modelId}
+                  onChange={handlePresetChange}
+                  className="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8"
+                >
+                  {PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </option>
+                  ))}
+                  <option value="custom">Custom (Hugging Face ID)</option>
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {isCustom && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                <label htmlFor="model-id" className="text-sm font-medium text-gray-700 block mb-1">
+                  Custom Repo ID
+                </label>
+                <input
+                  id="model-id"
+                  type="text"
+                  value={modelId}
+                  onChange={(e) => setModelId(e.target.value)}
+                  placeholder={DEFAULT_MODEL}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Must be a <a href="https://huggingface.co/models?library=transformers.js" target="_blank" rel="noreferrer" className="underline hover:text-black">Transformers.js compatible</a> model (ONNX).
+                </p>
+              </div>
+            )}
           </div>
 
           <button
@@ -104,7 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {loadingStatus === 'error' && errorMessage && (
               <div className="flex items-start gap-2 text-red-700 text-sm bg-red-50 p-3 rounded-md border border-red-100">
                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                <span className="leading-snug">{errorMessage}</span>
+                <span className="leading-snug break-words">{errorMessage}</span>
               </div>
             )}
           </div>
