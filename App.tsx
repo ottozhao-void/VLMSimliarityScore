@@ -9,7 +9,16 @@ import workerCode from './worker';
 const App: React.FC = () => {
   // State
   const [modelId, setModelId] = useState(DEFAULT_MODEL);
-  const [useGpu, setUseGpu] = useState(true);
+  
+  // Initialize useGpu based on browser support
+  const [useGpu, setUseGpu] = useState(() => {
+    // Basic check for WebGPU support
+    if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+      return true;
+    }
+    return false;
+  });
+
   const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
