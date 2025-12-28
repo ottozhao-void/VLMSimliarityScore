@@ -1,0 +1,5 @@
+{
+  "name": "VLM Similarity Scorer",
+  "description": "A Vision-Language Model tool to measure semantic similarity between images and text prompts using on-device inference.",
+  "requestFramePermissions": []
+}
