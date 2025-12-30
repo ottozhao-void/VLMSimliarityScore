@@ -61,7 +61,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   return (
     <div className="flex flex-col h-full bg-white relative overflow-y-auto">
       <div className="max-w-4xl mx-auto w-full p-8 space-y-8">
-        
+
         {/* Header */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Similarity Analysis</h2>
@@ -70,7 +70,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
 
         {/* Workspace Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* Left Column: Image Input */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -82,7 +82,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
               )}
             </div>
 
-            <div 
+            <div
               className={cn(
                 "border-2 border-dashed rounded-xl h-[300px] flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group",
                 imagePreview ? "border-gray-200 bg-gray-50" : "border-gray-300 hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer"
@@ -91,19 +91,19 @@ const Workspace: React.FC<WorkspaceProps> = ({
               onDragOver={handleDragOver}
               onClick={() => !imagePreview && fileInputRef.current?.click()}
             >
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImageUpload} 
-                className="hidden" 
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                className="hidden"
                 accept="image/png, image/jpeg, image/jpg"
               />
-              
+
               {imagePreview ? (
                 <div className="relative w-full h-full p-2">
-                  <img 
-                    src={imagePreview} 
-                    alt="Preview" 
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
                     className="w-full h-full object-contain rounded-lg shadow-sm"
                   />
                 </div>
@@ -167,7 +167,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
                 <BarChart3 size={20} />
                 <span className="text-sm font-medium uppercase tracking-wider">Analysis Results</span>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center justify-center text-center">
                   <span className="text-sm text-gray-500 font-medium mb-2">Semantic Similarity Score</span>
@@ -184,7 +184,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
                     </div>
                     <span className="text-lg font-bold text-gray-900">{result.time.toFixed(0)} ms</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <ImageIcon size={18} className="text-gray-400" />

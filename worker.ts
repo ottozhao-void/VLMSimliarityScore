@@ -99,16 +99,44 @@ self.addEventListener('message', async (event) => {
 
     try {
       const startTime = performance.now();
+      let textInputs, imageInputs;
 
       // 1. Process Inputs
-      const textInputs = tokenizer(text, { padding: true, truncation: true, return_tensors: 'pt' });
-      const imageInputs = await processor(imageBlob);
+      try {
+        console.log('Tokenizing text:', text);
+        // Fix: Wrap text in array to ensure batch dimension [1, seq_len]
+        textInputs = tokenizer([text], { padding: 'max_length', truncation: true }); 
+        console.log('Text inputs keys:', Object.keys(textInputs));
+      } catch (e) {
+        throw new Error(\`Tokenizer failed: \${ e.message }\`);
+      }
+
+      try {
+        console.log('Processing image blob');
+        // Ensure imageBlob is processed correctly
+        imageInputs = await processor([imageBlob]);
+        console.log('Image inputs keys:', Object.keys(imageInputs));
+      } catch (e) {
+        throw new Error(\`Processor failed: \${ e.message } - Input type: \${ typeof imageBlob } \`);
+      }
+
+      if (!textInputs.input_ids) throw new Error("Tokenizer failed to generate input_ids");
+      if (!imageInputs.pixel_values) throw new Error("Processor failed to generate pixel_values");
 
       // 2. Run Inference
-      const { text_embeds, image_embeds } = await model({
-        ...textInputs,
-        ...imageInputs
-      });
+      console.log('Running model with inputs');
+      let output;
+      try {
+        output = await model({
+          ...textInputs,
+          ...imageInputs
+        });
+      } catch (e) {
+         // Check if it is the specific iteration error
+         throw new Error(\`Model execution failed: \${ e.message } \`);
+      }
+      
+      const { text_embeds, image_embeds } = output;
 
       // 3. Compute Similarity
       const textVec = text_embeds.data;
