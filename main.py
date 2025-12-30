@@ -10,6 +10,7 @@ from PIL import Image
 import torch
 import io
 import time
+import math
 
 app = FastAPI()
 
@@ -141,6 +142,11 @@ async def predict(
         if text_embeds is not None and image_embeds is not None:
             # Cosine similarity is dot product of normalized vectors
             similarity = (text_embeds @ image_embeds.T).item()
+            
+            # Clamp similarity to [-1, 1] to avoid domain errors
+            similarity_clamped = max(-1.0, min(1.0, similarity))
+            angle_rad = math.acos(similarity_clamped)
+            angle_deg = math.degrees(angle_rad)
         else:
              raise HTTPException(status_code=500, detail="Could not compute embeddings for selected sources.")
         
@@ -152,6 +158,7 @@ async def predict(
         
         return {
             "score": similarity,
+            "angle": angle_deg,
             "time": duration_ms
         }
         

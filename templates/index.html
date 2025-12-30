@@ -71,6 +71,41 @@
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                                 width="16" height="16"></i>
                         </div>
+
+                        <!-- MOVED INPUTS -->
+                        <div id="drop-zone-container" class="pt-2">
+                            <div id="drop-zone"
+                                class="border-2 border-dashed border-gray-300 rounded-xl h-48 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                                <input type="file" id="image-input" class="hidden"
+                                    accept="image/png, image/jpeg, image/jpg">
+
+                                <!-- Placeholder -->
+                                <div id="drop-placeholder"
+                                    class="flex flex-col items-center gap-2 text-gray-400 group-hover:text-gray-600">
+                                    <div class="p-3 bg-white rounded-full shadow-sm">
+                                        <i data-lucide="upload-cloud" width="24" height="24"></i>
+                                    </div>
+                                    <div class="text-center px-4">
+                                        <p class="text-xs font-medium text-gray-900">Click to upload</p>
+                                    </div>
+                                </div>
+
+                                <!-- Preview -->
+                                <img id="image-preview"
+                                    class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm" alt="Preview">
+                            </div>
+                            <!-- Clear Button moved here for easier access -->
+                            <button id="clear-image-btn"
+                                class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 mt-2 w-full justify-center">
+                                <i data-lucide="x" width="14" height="14"></i> Clear Image
+                            </button>
+                        </div>
+                        <!-- Random Placeholder -->
+                        <div id="image-random-placeholder"
+                            class="hidden h-48 bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400 mt-2">
+                            <i data-lucide="dice-5" width="32" height="32" class="opacity-50 mb-2"></i>
+                            <p class="text-xs font-medium uppercase tracking-wider">Random Vector</p>
+                        </div>
                     </div>
 
                     <!-- Text Source -->
@@ -85,6 +120,19 @@
                             <i data-lucide="chevron-down"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                                 width="16" height="16"></i>
+                        </div>
+
+                        <!-- MOVED INPUTS -->
+                        <div id="text-input-container" class="pt-2">
+                            <textarea id="text-input" placeholder="Enter description..."
+                                class="w-full h-40 p-3 bg-white border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400 text-sm"></textarea>
+                        </div>
+
+                        <!-- Random Placeholder -->
+                        <div id="text-random-placeholder"
+                            class="hidden h-40 bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400 mt-2">
+                            <i data-lucide="dice-5" width="32" height="32" class="opacity-50 mb-2"></i>
+                            <p class="text-xs font-medium uppercase tracking-wider">Random Vector</p>
                         </div>
                     </div>
                 </div>
@@ -175,73 +223,9 @@
                         alignment.</p>
                 </div>
 
-                <!-- Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                    <!-- Image Input -->
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="space-y-1">
-                                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Image</h3>
-                            </div>
-                            <button id="clear-image-btn"
-                                class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 mt-6">
-                                <i data-lucide="x" width="14" height="14"></i> Clear
-                            </button>
-                        </div>
-
-                        <div id="drop-zone-container">
-                            <div id="drop-zone"
-                                class="border-2 border-dashed border-gray-300 rounded-xl h-[300px] flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
-                                <input type="file" id="image-input" class="hidden"
-                                    accept="image/png, image/jpeg, image/jpg">
-
-                                <!-- Placeholder -->
-                                <div id="drop-placeholder"
-                                    class="flex flex-col items-center gap-3 text-gray-400 group-hover:text-gray-600">
-                                    <div class="p-4 bg-white rounded-full shadow-sm">
-                                        <i data-lucide="upload-cloud" width="32" height="32"></i>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="text-sm font-medium text-gray-900">Click to upload or drag and drop
-                                        </p>
-                                        <p class="text-xs text-gray-500 mt-1">JPG, PNG up to 10MB</p>
-                                    </div>
-                                </div>
-
-                                <!-- Preview -->
-                                <img id="image-preview"
-                                    class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm" alt="Preview">
-                            </div>
-                        </div>
-                        <!-- Random Placeholder -->
-                        <div id="image-random-placeholder"
-                            class="hidden h-[300px] bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400">
-                            <i data-lucide="dice-5" width="48" height="48" class="opacity-50 mb-2"></i>
-                            <p class="text-sm font-medium uppercase tracking-wider">Random Vector Mode</p>
-                        </div>
-                    </div>
-
-                    <!-- Text Input -->
-                    <div class="space-y-4 flex flex-col">
-                        <div class="space-y-1">
-                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Text Prompt
-                            </h3>
-                        </div>
-
-                        <div id="text-input-container" class="flex-1 flex flex-col">
-                            <textarea id="text-input"
-                                placeholder="Enter a description or prompt to compare with the image..."
-                                class="w-full flex-1 min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400"></textarea>
-                        </div>
-
-                        <!-- Random Placeholder -->
-                        <div id="text-random-placeholder"
-                            class="hidden h-[300px] bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400">
-                            <i data-lucide="dice-5" width="48" height="48" class="opacity-50 mb-2"></i>
-                            <p class="text-sm font-medium uppercase tracking-wider">Random Vector Mode</p>
-                        </div>
-                    </div>
+                <!-- Inputs moved to Sidebar -->
+                <div class="hidden">
+                    <!-- Keeping this div hidden just in case to maintain grid structure if needed, but actually we can just delete the content -->
                 </div>
 
                 <!-- Action Bar -->
@@ -267,6 +251,13 @@
                                 <span class="text-sm text-gray-500 font-medium mb-2">Semantic Similarity Score</span>
                                 <div class="text-6xl font-black text-gray-900 tracking-tight">
                                     <span id="score-value">0.0000</span>
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-gray-200 w-full flex flex-col items-center">
+                                    <span class="text-xs text-gray-400 font-medium mb-1">Vector Angle</span>
+                                    <div class="flex items-baseline gap-1">
+                                        <span id="angle-value" class="text-2xl font-bold text-gray-700">0.0</span>
+                                        <span class="text-sm text-gray-400">deg</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -375,6 +366,7 @@
 
         const resultsSection = document.getElementById('results-section');
         const scoreValue = document.getElementById('score-value');
+        const angleValue = document.getElementById('angle-value');
         const timeValue = document.getElementById('time-value');
         const modelUsedValue = document.getElementById('model-used-value');
 
@@ -602,6 +594,9 @@
                 const data = await res.json();
 
                 scoreValue.innerText = data.score.toFixed(4);
+                if (data.angle !== undefined) {
+                    angleValue.innerText = data.angle.toFixed(2);
+                }
                 timeValue.innerText = data.time.toFixed(0) + ' ms';
                 modelUsedValue.innerText = currentModelId;
                 resultsSection.classList.remove('hidden');
