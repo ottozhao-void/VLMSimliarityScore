@@ -41,21 +41,46 @@
                 <h1 class="text-xl font-bold tracking-tight">VLM Scorer</h1>
             </div>
 
-            <div class="space-y-8 flex-1">
+            <!-- Tabs -->
+            <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-lg mb-6">
+                <button id="tab-source"
+                    class="flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all bg-white text-gray-900 shadow-sm">
+                    Source
+                </button>
+                <button id="tab-general"
+                    class="flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-900">
+                    General
+                </button>
+            </div>
 
-                <!-- Mode -->
-                <div class="space-y-4">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Mode</h2>
-                    <!-- Similarity Mode -->
-                    <div>
-                        <label for="sim-mode" class="text-sm font-medium text-gray-700 block mb-1">Similarity
-                            Mode</label>
+            <div class="space-y-8 flex-1 overflow-y-auto">
+
+                <!-- Source Settings (Tab Content) -->
+                <div id="content-source" class="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
+                    <!-- Image Source -->
+                    <div class="space-y-2">
+                        <label for="image-source" class="text-sm font-medium text-gray-700 block">Image Source</label>
                         <div class="relative">
-                            <select id="sim-mode"
+                            <select id="image-source"
                                 class="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8">
-                                <option value="image-text" selected>Image-Text</option>
-                                <option value="video-query">Video-Query</option>
-                                <option value="random-random">Random-Random</option>
+                                <option value="Image">Upload Image</option>
+                                <option value="Video">Video (Not Implemented)</option>
+                                <option value="Random">Random Vector</option>
+                            </select>
+                            <i data-lucide="chevron-down"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                width="16" height="16"></i>
+                        </div>
+                    </div>
+
+                    <!-- Text Source -->
+                    <div class="space-y-2">
+                        <label for="text-source" class="text-sm font-medium text-gray-700 block">Text Source</label>
+                        <div class="relative">
+                            <select id="text-source"
+                                class="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8">
+                                <option value="Text">Text Prompt</option>
+                                <option value="Random">Random Vector</option>
                             </select>
                             <i data-lucide="chevron-down"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -64,11 +89,9 @@
                     </div>
                 </div>
 
-                <div class="h-px bg-gray-200"></div>
-
-                <!-- General Setting -->
-                <div class="space-y-4">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">General Setting</h2>
+                <!-- General Settings (Tab Content) -->
+                <div id="content-general"
+                    class="space-y-6 hidden animate-in fade-in slide-in-from-right-4 duration-300">
 
                     <div class="space-y-3">
                         <!-- Model Selection -->
@@ -159,14 +182,7 @@
                     <div class="space-y-4">
                         <div class="flex justify-between items-start mb-2">
                             <div class="space-y-1">
-                                <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Image
-                                    Source</label>
-                                <select id="image-source"
-                                    class="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-black">
-                                    <option value="Image">Upload Image</option>
-                                    <option value="Video">Video (Not Implemented)</option>
-                                    <option value="Random">Random Vector</option>
-                                </select>
+                                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Image</h3>
                             </div>
                             <button id="clear-image-btn"
                                 class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 mt-6">
@@ -209,13 +225,8 @@
                     <!-- Text Input -->
                     <div class="space-y-4 flex flex-col">
                         <div class="space-y-1">
-                            <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Text
-                                Source</label>
-                            <select id="text-source"
-                                class="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-black">
-                                <option value="Text">Text Prompt</option>
-                                <option value="Random">Random Vector</option>
-                            </select>
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Text Prompt
+                            </h3>
                         </div>
 
                         <div id="text-input-container" class="flex-1 flex flex-col">
@@ -324,6 +335,41 @@
 
         const calculateBtn = document.getElementById('calculate-btn');
 
+        // Tab Handling
+        const tabSource = document.getElementById('tab-source');
+        const tabGeneral = document.getElementById('tab-general');
+        const contentSource = document.getElementById('content-source');
+        const contentGeneral = document.getElementById('content-general');
+
+        function switchTab(tab) {
+            if (tab === 'source') {
+                tabSource.classList.replace('text-gray-500', 'bg-white');
+                tabSource.classList.add('text-gray-900', 'shadow-sm');
+                tabSource.classList.remove('hover:text-gray-900');
+
+                tabGeneral.classList.replace('bg-white', 'text-gray-500');
+                tabGeneral.classList.remove('text-gray-900', 'shadow-sm');
+                tabGeneral.classList.add('hover:text-gray-900');
+
+                contentSource.classList.remove('hidden');
+                contentGeneral.classList.add('hidden');
+            } else {
+                tabGeneral.classList.replace('text-gray-500', 'bg-white');
+                tabGeneral.classList.add('text-gray-900', 'shadow-sm');
+                tabGeneral.classList.remove('hover:text-gray-900');
+
+                tabSource.classList.replace('bg-white', 'text-gray-500');
+                tabSource.classList.remove('text-gray-900', 'shadow-sm');
+                tabSource.classList.add('hover:text-gray-900');
+
+                contentGeneral.classList.remove('hidden');
+                contentSource.classList.add('hidden');
+            }
+        }
+
+        tabSource.addEventListener('click', () => switchTab('source'));
+        tabGeneral.addEventListener('click', () => switchTab('general'));
+
         const imageSourceSelect = document.getElementById('image-source');
         const textSourceSelect = document.getElementById('text-source');
 
@@ -406,6 +452,7 @@
             }
             updateCalculateButton();
         });
+
         modelPreset.addEventListener('change', (e) => {
             if (e.target.value === 'custom') {
                 customModelInput.classList.remove('hidden');
@@ -570,7 +617,6 @@
                 lucide.createIcons();
             }
         });
-
     </script>
 </body>
 
