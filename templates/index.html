@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,21 +10,29 @@
     <style>
         /* Custom animations */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         .fade-in {
             animation: fadeIn 0.3s ease-in-out;
         }
     </style>
 </head>
+
 <body class="h-screen overflow-hidden bg-white font-sans text-gray-900">
 
     <div class="grid grid-cols-12 h-screen">
-        
+
         <!-- SIDEBAR -->
-        <div class="col-span-12 md:col-span-4 lg:col-span-3 h-full border-r border-gray-200 z-10 shadow-lg md:shadow-none bg-gray-50 flex flex-col p-6">
-            
+        <div
+            class="col-span-12 md:col-span-4 lg:col-span-3 h-full border-r border-gray-200 z-10 shadow-lg md:shadow-none bg-gray-50 flex flex-col p-6">
+
             <!-- Header -->
             <div class="flex items-center gap-2 mb-8">
                 <div class="p-2 bg-black text-white rounded-lg">
@@ -33,32 +42,39 @@
             </div>
 
             <div class="space-y-8 flex-1">
-                
+
                 <!-- Model Configuration -->
                 <div class="space-y-4">
                     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Model Configuration</h2>
-                    
+
                     <div class="space-y-3">
                         <div>
-                            <label for="model-preset" class="text-sm font-medium text-gray-700 block mb-1">Select Model</label>
+                            <label for="model-preset" class="text-sm font-medium text-gray-700 block mb-1">Select
+                                Model</label>
                             <div class="relative">
-                                <select id="model-preset" class="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8">
+                                <select id="model-preset"
+                                    class="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8">
                                     <option value="Xenova/siglip-so400m-patch14-384">SigLIP SO400M (Google)</option>
                                     <option value="Xenova/clip-vit-base-patch32">CLIP ViT-Base Patch32</option>
                                     <option value="custom">Custom (Hugging Face ID)</option>
                                 </select>
-                                <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16"></i>
+                                <i data-lucide="chevron-down"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                    width="16" height="16"></i>
                             </div>
                         </div>
 
                         <div id="custom-model-input" class="hidden">
-                            <label for="model-id" class="text-sm font-medium text-gray-700 block mb-1">Custom Repo ID</label>
-                            <input id="model-id" type="text" placeholder="google/siglip-so400m-patch14-384" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all">
+                            <label for="model-id" class="text-sm font-medium text-gray-700 block mb-1">Custom Repo
+                                ID</label>
+                            <input id="model-id" type="text" placeholder="google/siglip-so400m-patch14-384"
+                                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all">
                             <p class="text-xs text-gray-500 mt-1">Must be a Hugging Face compatible model.</p>
                         </div>
                     </div>
 
-                    <button id="load-model-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all bg-black text-white hover:bg-gray-800 shadow-sm active:scale-95">
+                    <button id="load-model-btn"
+                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all bg-black text-white hover:bg-gray-800 shadow-sm active:scale-95">
                         <i data-lucide="download" width="16" height="16"></i>
                         <span>Load Model</span>
                     </button>
@@ -74,9 +90,11 @@
                 <!-- Hardware Acceleration -->
                 <div class="space-y-4">
                     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Hardware</h2>
-                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
+                    <div
+                        class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
                         <div class="flex items-center gap-3">
-                            <div id="gpu-icon-container" class="p-2 rounded-md bg-gray-100 text-gray-500 transition-colors">
+                            <div id="gpu-icon-container"
+                                class="p-2 rounded-md bg-gray-100 text-gray-500 transition-colors">
                                 <i id="gpu-icon" data-lucide="cpu" width="18" height="18"></i>
                             </div>
                             <div class="flex flex-col">
@@ -84,9 +102,11 @@
                                 <span id="gpu-text" class="text-xs text-gray-500">CPU Mode</span>
                             </div>
                         </div>
-                        
-                        <button id="gpu-toggle" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none">
-                            <span id="gpu-toggle-knob" class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+
+                        <button id="gpu-toggle"
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-gray-200 focus:outline-none">
+                            <span id="gpu-toggle-knob"
+                                class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
                         </button>
                     </div>
                     <p class="text-xs text-gray-400">Controls Server-side device (CUDA/MPS vs CPU).</p>
@@ -101,30 +121,36 @@
         <!-- WORKSPACE -->
         <div class="col-span-12 md:col-span-8 lg:col-span-9 h-full relative overflow-y-auto bg-white">
             <div class="max-w-4xl mx-auto w-full p-8 space-y-8">
-                
+
                 <!-- Header -->
                 <div>
                     <h2 class="text-2xl font-bold text-gray-900">Similarity Analysis</h2>
-                    <p class="text-gray-500 mt-1">Upload an image and provide a text prompt to measure semantic alignment.</p>
+                    <p class="text-gray-500 mt-1">Upload an image and provide a text prompt to measure semantic
+                        alignment.</p>
                 </div>
 
                 <!-- Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    
+
                     <!-- Image Input -->
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
-                            <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Image Source</label>
-                            <button id="clear-image-btn" class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1">
+                            <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Image
+                                Source</label>
+                            <button id="clear-image-btn"
+                                class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1">
                                 <i data-lucide="x" width="14" height="14"></i> Clear
                             </button>
                         </div>
 
-                        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-xl h-[300px] flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
-                            <input type="file" id="image-input" class="hidden" accept="image/png, image/jpeg, image/jpg">
-                            
+                        <div id="drop-zone"
+                            class="border-2 border-dashed border-gray-300 rounded-xl h-[300px] flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                            <input type="file" id="image-input" class="hidden"
+                                accept="image/png, image/jpeg, image/jpg">
+
                             <!-- Placeholder -->
-                            <div id="drop-placeholder" class="flex flex-col items-center gap-3 text-gray-400 group-hover:text-gray-600">
+                            <div id="drop-placeholder"
+                                class="flex flex-col items-center gap-3 text-gray-400 group-hover:text-gray-600">
                                 <div class="p-4 bg-white rounded-full shadow-sm">
                                     <i data-lucide="upload-cloud" width="32" height="32"></i>
                                 </div>
@@ -135,20 +161,25 @@
                             </div>
 
                             <!-- Preview -->
-                            <img id="image-preview" class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm" alt="Preview">
+                            <img id="image-preview" class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm"
+                                alt="Preview">
                         </div>
                     </div>
 
                     <!-- Text Input -->
                     <div class="space-y-4 flex flex-col">
-                        <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Text Query / Prompt</label>
-                        <textarea id="text-input" placeholder="Enter a description or prompt to compare with the image..." class="w-full flex-1 min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400"></textarea>
+                        <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Text Query /
+                            Prompt</label>
+                        <textarea id="text-input"
+                            placeholder="Enter a description or prompt to compare with the image..."
+                            class="w-full flex-1 min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400"></textarea>
                     </div>
                 </div>
 
                 <!-- Action Bar -->
                 <div class="flex items-center justify-end pt-6 border-t border-gray-100">
-                    <button id="calculate-btn" disabled class="flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg bg-gray-100 text-gray-400 cursor-not-allowed">
+                    <button id="calculate-btn" disabled
+                        class="flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg bg-gray-100 text-gray-400 cursor-not-allowed">
                         <i data-lucide="play" width="20" height="20" fill="currentColor"></i>
                         <span>Calculate Similarity</span>
                     </button>
@@ -163,10 +194,11 @@
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="bg-gray-50 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+                            <div
+                                class="bg-gray-50 rounded-xl p-6 flex flex-col items-center justify-center text-center">
                                 <span class="text-sm text-gray-500 font-medium mb-2">Semantic Similarity Score</span>
                                 <div class="text-6xl font-black text-gray-900 tracking-tight">
-                                    <span id="score-value">0.00</span><span class="text-3xl text-gray-400 ml-1">%</span>
+                                    <span id="score-value">0.0000</span>
                                 </div>
                             </div>
 
@@ -184,7 +216,8 @@
                                         <i data-lucide="image" width="18" height="18" class="text-gray-400"></i>
                                         <span class="text-sm font-medium text-gray-700">Model Used</span>
                                     </div>
-                                    <span id="model-used-value" class="text-sm font-bold text-gray-900">SigLIP (Base)</span>
+                                    <span id="model-used-value" class="text-sm font-bold text-gray-900">SigLIP
+                                        (Base)</span>
                                 </div>
                             </div>
                         </div>
@@ -212,7 +245,7 @@
         const customModelIdField = document.getElementById('model-id');
         const loadModelBtn = document.getElementById('load-model-btn');
         const statusContainer = document.getElementById('status-container');
-        
+
         const gpuToggle = document.getElementById('gpu-toggle');
         const gpuToggleKnob = document.getElementById('gpu-toggle-knob');
         const gpuIconContainer = document.getElementById('gpu-icon-container');
@@ -323,7 +356,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ model_id: modelId, use_gpu: useGpu })
                 });
-                
+
                 if (!res.ok) throw await res.json();
 
                 setStatus('ready');
@@ -385,11 +418,11 @@
             imagePreview.classList.add('hidden');
             dropPlaceholder.classList.remove('hidden');
             clearImageBtn.classList.add('hidden');
-            
+
             // Reset styles
             dropZone.classList.remove('border-gray-200', 'bg-gray-50');
             dropZone.classList.add('border-gray-300', 'hover:border-black', 'bg-gray-50', 'hover:bg-gray-100', 'cursor-pointer');
-            
+
             updateCalculateButton();
         });
 
@@ -415,14 +448,14 @@
                 });
 
                 if (!res.ok) throw await res.json();
-                
+
                 const data = await res.json();
-                
-                scoreValue.innerText = (data.score * 100).toFixed(2);
+
+                scoreValue.innerText = data.score.toFixed(4);
                 timeValue.innerText = data.time.toFixed(0) + ' ms';
                 modelUsedValue.innerText = currentModelId;
                 resultsSection.classList.remove('hidden');
-                
+
             } catch (err) {
                 console.error(err);
                 alert('Inference failed: ' + (err.detail || err.message));
@@ -437,4 +470,5 @@
 
     </script>
 </body>
+
 </html>
