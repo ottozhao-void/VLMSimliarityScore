@@ -157,45 +157,79 @@
 
                     <!-- Image Input -->
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Image
-                                Source</label>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="space-y-1">
+                                <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Image
+                                    Source</label>
+                                <select id="image-source"
+                                    class="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-black">
+                                    <option value="Image">Upload Image</option>
+                                    <option value="Video">Video (Not Implemented)</option>
+                                    <option value="Random">Random Vector</option>
+                                </select>
+                            </div>
                             <button id="clear-image-btn"
-                                class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1">
+                                class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 mt-6">
                                 <i data-lucide="x" width="14" height="14"></i> Clear
                             </button>
                         </div>
 
-                        <div id="drop-zone"
-                            class="border-2 border-dashed border-gray-300 rounded-xl h-[300px] flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
-                            <input type="file" id="image-input" class="hidden"
-                                accept="image/png, image/jpeg, image/jpg">
+                        <div id="drop-zone-container">
+                            <div id="drop-zone"
+                                class="border-2 border-dashed border-gray-300 rounded-xl h-[300px] flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                                <input type="file" id="image-input" class="hidden"
+                                    accept="image/png, image/jpeg, image/jpg">
 
-                            <!-- Placeholder -->
-                            <div id="drop-placeholder"
-                                class="flex flex-col items-center gap-3 text-gray-400 group-hover:text-gray-600">
-                                <div class="p-4 bg-white rounded-full shadow-sm">
-                                    <i data-lucide="upload-cloud" width="32" height="32"></i>
+                                <!-- Placeholder -->
+                                <div id="drop-placeholder"
+                                    class="flex flex-col items-center gap-3 text-gray-400 group-hover:text-gray-600">
+                                    <div class="p-4 bg-white rounded-full shadow-sm">
+                                        <i data-lucide="upload-cloud" width="32" height="32"></i>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-sm font-medium text-gray-900">Click to upload or drag and drop
+                                        </p>
+                                        <p class="text-xs text-gray-500 mt-1">JPG, PNG up to 10MB</p>
+                                    </div>
                                 </div>
-                                <div class="text-center">
-                                    <p class="text-sm font-medium text-gray-900">Click to upload or drag and drop</p>
-                                    <p class="text-xs text-gray-500 mt-1">JPG, PNG up to 10MB</p>
-                                </div>
+
+                                <!-- Preview -->
+                                <img id="image-preview"
+                                    class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm" alt="Preview">
                             </div>
-
-                            <!-- Preview -->
-                            <img id="image-preview" class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm"
-                                alt="Preview">
+                        </div>
+                        <!-- Random Placeholder -->
+                        <div id="image-random-placeholder"
+                            class="hidden h-[300px] bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400">
+                            <i data-lucide="dice-5" width="48" height="48" class="opacity-50 mb-2"></i>
+                            <p class="text-sm font-medium uppercase tracking-wider">Random Vector Mode</p>
                         </div>
                     </div>
 
                     <!-- Text Input -->
                     <div class="space-y-4 flex flex-col">
-                        <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Text Query /
-                            Prompt</label>
-                        <textarea id="text-input"
-                            placeholder="Enter a description or prompt to compare with the image..."
-                            class="w-full flex-1 min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400"></textarea>
+                        <div class="space-y-1">
+                            <label class="text-sm font-semibold text-gray-700 uppercase tracking-wide block">Text
+                                Source</label>
+                            <select id="text-source"
+                                class="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-black">
+                                <option value="Text">Text Prompt</option>
+                                <option value="Random">Random Vector</option>
+                            </select>
+                        </div>
+
+                        <div id="text-input-container" class="flex-1 flex flex-col">
+                            <textarea id="text-input"
+                                placeholder="Enter a description or prompt to compare with the image..."
+                                class="w-full flex-1 min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400"></textarea>
+                        </div>
+
+                        <!-- Random Placeholder -->
+                        <div id="text-random-placeholder"
+                            class="hidden h-[300px] bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400">
+                            <i data-lucide="dice-5" width="48" height="48" class="opacity-50 mb-2"></i>
+                            <p class="text-sm font-medium uppercase tracking-wider">Random Vector Mode</p>
+                        </div>
                     </div>
                 </div>
 
@@ -276,12 +310,22 @@
         const gpuText = document.getElementById('gpu-text');
 
         const dropZone = document.getElementById('drop-zone');
+        const dropZoneContainer = document.getElementById('drop-zone-container');
+        const imageRandomPlaceholder = document.getElementById('image-random-placeholder');
+
         const imageInput = document.getElementById('image-input');
         const dropPlaceholder = document.getElementById('drop-placeholder');
         const imagePreview = document.getElementById('image-preview');
         const clearImageBtn = document.getElementById('clear-image-btn');
+
         const textInput = document.getElementById('text-input');
+        const textInputContainer = document.getElementById('text-input-container');
+        const textRandomPlaceholder = document.getElementById('text-random-placeholder');
+
         const calculateBtn = document.getElementById('calculate-btn');
+
+        const imageSourceSelect = document.getElementById('image-source');
+        const textSourceSelect = document.getElementById('text-source');
 
         const resultsSection = document.getElementById('results-section');
         const scoreValue = document.getElementById('score-value');
@@ -319,8 +363,8 @@
         }
 
         function updateCalculateButton() {
-            const hasText = textInput.value.trim().length > 0;
-            const hasImage = selectedImage !== null;
+            const hasText = textSourceSelect.value === 'Random' || textInput.value.trim().length > 0;
+            const hasImage = imageSourceSelect.value === 'Random' || selectedImage !== null;
             const ready = isModelLoaded && hasText && hasImage;
 
             if (ready) {
@@ -335,6 +379,33 @@
         }
 
         // Event Listeners
+
+        // Source Selectors
+        imageSourceSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'Random') {
+                dropZoneContainer.classList.add('hidden');
+                imageRandomPlaceholder.classList.remove('hidden');
+            } else {
+                dropZoneContainer.classList.remove('hidden');
+                imageRandomPlaceholder.classList.add('hidden');
+            }
+            // If Video is selected (not implemented), maybe show alert?
+            // For now, Video behaves like Image but without implementation logic as per req.
+            updateCalculateButton();
+        });
+
+        textSourceSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'Random') {
+                textInputContainer.classList.add('hidden');
+                textRandomPlaceholder.classList.remove('hidden');
+            } else {
+                textInputContainer.classList.remove('hidden');
+                textRandomPlaceholder.classList.add('hidden');
+            }
+            updateCalculateButton();
+        });
         modelPreset.addEventListener('change', (e) => {
             if (e.target.value === 'custom') {
                 customModelInput.classList.remove('hidden');
@@ -453,7 +524,8 @@
 
         // Calculation
         calculateBtn.addEventListener('click', async () => {
-            if (!selectedImage || !textInput.value) return;
+            if (!selectedImage && imageSourceSelect.value === 'Image') return;
+            if (!textInput.value && textSourceSelect.value === 'Text') return;
 
             calculateBtn.disabled = true;
             calculateBtn.innerHTML = `
@@ -461,8 +533,16 @@
                 <span>Computing...</span>`;
 
             const formData = new FormData();
-            formData.append('text', textInput.value);
-            formData.append('image', selectedImage);
+            formData.append('image_source', imageSourceSelect.value);
+            formData.append('text_source', textSourceSelect.value);
+
+            if (imageSourceSelect.value === 'Image' && selectedImage) {
+                formData.append('image', selectedImage);
+            }
+
+            if (textSourceSelect.value === 'Text') {
+                formData.append('text', textInput.value);
+            }
 
             try {
                 const res = await fetch('/api/predict', {

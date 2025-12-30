@@ -63,8 +63,10 @@ async def load_model(request: LoadModelRequest):
 
 @app.post("/api/predict")
 async def predict(
-    text: str = Form(...),
-    image: UploadFile = File(...)
+    image_source: str = Form("Image"),
+    text_source: str = Form("Text"),
+    text: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None)
 ):
     if not state.model or not state.processor:
         raise HTTPException(status_code=400, detail="Model not loaded")
@@ -72,51 +74,78 @@ async def predict(
     try:
         start_time = time.time()
         
-        # Read image
-        image_data = await image.read()
-        raw_image = Image.open(io.BytesIO(image_data)).convert("RGB")
-        
-        # Process inputs
-        inputs = state.processor(
-            text=[text],
-            images=raw_image,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt"
-        ).to(state.device)
-        
-        # Inference
-        with torch.no_grad():
-            outputs = state.model(**inputs)
-        
-        # Calculate similarity (Cosine Similarity)
-        # SigLIP/CLIP: normalize embeddings then dot product
-        
         # Helper to normalize
         def normalize(t):
-            return t / t.norm(dim=-1, keepdim=True)
+             return t / t.norm(dim=-1, keepdim=True)
 
-        if hasattr(outputs, 'text_embeds') and hasattr(outputs, 'image_embeds'):
-            text_embeds = normalize(outputs.text_embeds)
-            image_embeds = normalize(outputs.image_embeds)
+        text_embeds = None
+        image_embeds = None
+
+        # Image Processing
+        if image_source == "Random":
+            # Generate random vector
+            # We need to know embedding dimension.
+            # Try to infer from model config or run a dummy pass? 
+            # Or just use model.config.projection_dim if available. 
+            # Let's rely on running a dummy pass or known dimensions if possible, 
+            # OR simpler: check if we can get it from state.model.config
             
+            dim = 512 # Default CLIP/SigLIP base
+            if hasattr(state.model, "config"):
+                if hasattr(state.model.config, "projection_dim"):
+                    dim = state.model.config.projection_dim
+                elif hasattr(state.model.config, "hidden_size"):
+                    # careful, hidden_size might not be projection dim
+                    dim = state.model.config.hidden_size
+            
+            # Generate random normal vector
+            image_embeds = torch.randn(1, dim).to(state.device)
+            image_embeds = normalize(image_embeds)
+            
+        elif image_source == "Image" and image:
+            # Read image
+            image_data = await image.read()
+            raw_image = Image.open(io.BytesIO(image_data)).convert("RGB")
+            
+            # Process inputs just for image
+            # Note: processor usually handles both, but we can pass just images
+            img_inputs = state.processor(images=raw_image, return_tensors="pt").to(state.device)
+            
+            with torch.no_grad():
+                img_outputs = state.model.get_image_features(**img_inputs)
+            
+            image_embeds = normalize(img_outputs)
+        
+        # Text Processing
+        if text_source == "Random":
+            # Similar logic for text
+            dim = 512
+            if hasattr(state.model, "config"):
+                if hasattr(state.model.config, "projection_dim"):
+                    dim = state.model.config.projection_dim
+                elif hasattr(state.model.config, "hidden_size"):
+                    dim = state.model.config.hidden_size
+                    
+            text_embeds = torch.randn(1, dim).to(state.device)
+            text_embeds = normalize(text_embeds)
+            
+        elif text_source == "Text" and text:
+            # Process text
+            text_inputs = state.processor(text=[text], padding="max_length", truncation=True, return_tensors="pt").to(state.device)
+            
+            with torch.no_grad():
+                text_outputs = state.model.get_text_features(**text_inputs)
+            
+            text_embeds = normalize(text_outputs)
+
+        if text_embeds is not None and image_embeds is not None:
             # Cosine similarity is dot product of normalized vectors
             similarity = (text_embeds @ image_embeds.T).item()
-        
-        # Some models use different output names or logits
-        elif hasattr(outputs, 'logits_per_image'):
-             # For CLIP, logits_per_image is (image_batch, text_batch)
-             # We can use sigmoid(logits) on SigLIP or softmax on CLIP, but users usually want cosine sim.
-             # However, raw embeddings are safer if available.
-             # Let's try to extract embeddings from last_hidden_state if specific heads aren't available, 
-             # but usually AutoModel for CLIP/SigLIP returns embeds.
-             
-             # Fallback logic if needed, but standard SigLIP/CLIP models return embeds
-             raise HTTPException(status_code=500, detail="Model output format not supported (missing text/image embeds)")
-             
         else:
-             # Fallback for models that might compute logits directly
-             raise HTTPException(status_code=500, detail="Model output format not supported")
+             raise HTTPException(status_code=500, detail="Could not compute embeddings for selected sources.")
+        
+        # Old logic fallback removed/simplified since we use specific features API
+        pass
 
         end_time = time.time()
         duration_ms = (end_time - start_time) * 1000
