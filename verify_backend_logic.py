@@ -38,7 +38,8 @@ def verify_backend():
         "source_b_type": "Text",
         "source_a_text": "A photo of a cat",
         "source_b_text": "A photo of a dog",
-        "reparam_sigma": 0.0,
+        "reparam_sigma_a": 0.0,
+        "reparam_sigma_b": 0.0,
         "text_embed_type": "projected"
     }
     res = client.post("/api/predict", data=data)
@@ -52,7 +53,11 @@ def verify_backend():
 
     # 3. Test Reparameterization
     print("\n[Test 2] Reparameterization: Text vs Text (Sigma=1.0)")
-    data["reparam_sigma"] = 1.0
+    data["reparam_sigma_a"] = 1.0
+    data["reparam_sigma_b"] = 1.0 # Or just one
+    # Remove old key if present, though it's ignored
+    if "reparam_sigma" in data: del data["reparam_sigma"]
+    
     res_sigma = client.post("/api/predict", data=data)
     if res_sigma.status_code == 200:
         json_res = res_sigma.json()
@@ -63,7 +68,8 @@ def verify_backend():
 
     # 4. Test Pooler Output
     print("\n[Test 3] Text Embed Type: Pooler Output")
-    data["reparam_sigma"] = 0.0
+    data["reparam_sigma_a"] = 0.0
+    data["reparam_sigma_b"] = 0.0
     data["text_embed_type"] = "pooler_output"
     res_pooler = client.post("/api/predict", data=data)
     if res_pooler.status_code == 200:

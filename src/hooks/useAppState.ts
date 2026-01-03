@@ -18,6 +18,8 @@ export interface AppState {
     customModelId: string;
     useGpu: boolean;
     reparamSigma: number;
+    useReparamA: boolean;
+    useReparamB: boolean;
     textEmbedType: TextEmbedType;
 }
 
@@ -38,6 +40,8 @@ export function useAppState() {
     const [useGpu, setUseGpu] = useState<boolean>(true);
 
     const [reparamSigma, setReparamSigma] = useState<number>(0.0);
+    const [useReparamA, setUseReparamA] = useState<boolean>(false);
+    const [useReparamB, setUseReparamB] = useState<boolean>(false);
     const [textEmbedType, setTextEmbedType] = useState<TextEmbedType>('projected');
 
     return {
@@ -52,6 +56,8 @@ export function useAppState() {
         customModelId, setCustomModelId,
         useGpu, setUseGpu,
         reparamSigma, setReparamSigma,
+        useReparamA, setUseReparamA,
+        useReparamB, setUseReparamB,
         textEmbedType, setTextEmbedType
     };
 }

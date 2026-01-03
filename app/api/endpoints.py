@@ -29,7 +29,8 @@ async def predict(
     source_b_text: Optional[str] = Form(None),
     source_a_file: Optional[UploadFile] = File(None),
     source_b_file: Optional[UploadFile] = File(None),
-    reparam_sigma: float = Form(0.0),
+    reparam_sigma_a: float = Form(0.0),
+    reparam_sigma_b: float = Form(0.0),
     text_embed_type: str = Form("projected") # "projected" or "pooler"
 ):
     if not state.has_model():
@@ -40,7 +41,7 @@ async def predict(
     
     try:
         # Helper to get embeddings
-        async def get_embeddings(source_type: str, text_val: Optional[str], file_val: Optional[UploadFile]):
+        async def get_embeddings(source_type: str, text_val: Optional[str], file_val: Optional[UploadFile], sigma: float):
             embeds = None
             timestamps = None
             is_video = False
@@ -49,14 +50,14 @@ async def predict(
                 if not text_val:
                     raise HTTPException(status_code=400, detail="Text required for Text source")
                 use_pooler = (text_embed_type == "pooler_output")
-                embeds = VLMService.get_text_embedding(text_val, use_pooler_output=use_pooler, sigma=reparam_sigma)
+                embeds = VLMService.get_text_embedding(text_val, use_pooler_output=use_pooler, sigma=sigma)
             
             elif source_type == "Image":
                 if not file_val:
                      raise HTTPException(status_code=400, detail="Image file required for Image source")
                 content = await file_val.read()
                 raw_image = Image.open(io.BytesIO(content)).convert("RGB")
-                embeds = VLMService.get_image_embedding(raw_image, sigma=reparam_sigma)
+                embeds = VLMService.get_image_embedding(raw_image, sigma=sigma)
             
             elif source_type == "Video":
                 if not file_val:
@@ -74,18 +75,11 @@ async def predict(
                      raise HTTPException(status_code=400, detail="Could not extract frames from video")
                 
                 # Batch process
-                # We need all embs to compute matrix or curve
-                # For large videos, we might OOM if we keep all on GPU? 
-                # VLMService.get_batch... returns tensor on device.
-                # Let's keep distinct batches or stack them?
-                # For sim matrix, we need full tensors. N*D.
-                
-                # Batch logic inside helper:
                 batch_size = 4
                 all_embeds_list = []
                 for i in range(0, len(frames), batch_size):
                     batch = frames[i:i+batch_size]
-                    batch_emb = VLMService.get_batch_image_embeddings(batch, sigma=reparam_sigma)
+                    batch_emb = VLMService.get_batch_image_embeddings(batch, sigma=sigma)
                     all_embeds_list.append(batch_emb)
                 
                 if all_embeds_list:
@@ -94,7 +88,7 @@ async def predict(
                     embeds = torch.empty(0, 512).to(state.device) # Fallback
 
             elif source_type == "Random":
-                embeds = VLMService.get_random_embedding(sigma=reparam_sigma)
+                embeds = VLMService.get_random_embedding(sigma=sigma)
             
             else:
                 raise HTTPException(status_code=400, detail=f"Unknown source type: {source_type}")
@@ -102,8 +96,8 @@ async def predict(
             return embeds, timestamps, is_video
 
         # 1. Get Embeddings for A and B
-        embeds_a, timestamps_a, is_video_a = await get_embeddings(source_a_type, source_a_text, source_a_file)
-        embeds_b, timestamps_b, is_video_b = await get_embeddings(source_b_type, source_b_text, source_b_file)
+        embeds_a, timestamps_a, is_video_a = await get_embeddings(source_a_type, source_a_text, source_a_file, reparam_sigma_a)
+        embeds_b, timestamps_b, is_video_b = await get_embeddings(source_b_type, source_b_text, source_b_file, reparam_sigma_b)
         
         # 2. Compute Similarity based on types
         res_type = "scalar"

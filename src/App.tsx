@@ -16,6 +16,9 @@ export default function App() {
     };
 
     const handleCalculate = async () => {
+        const sigmaA = appState.useReparamA ? appState.reparamSigma : 0;
+        const sigmaB = appState.useReparamB ? appState.reparamSigma : 0;
+
         await predict(
             appState.sourceAType,
             appState.sourceBType,
@@ -23,7 +26,8 @@ export default function App() {
             appState.sourceBText,
             appState.sourceAFile,
             appState.sourceBFile,
-            appState.reparamSigma,
+            sigmaA,
+            sigmaB,
             appState.textEmbedType
         );
     };

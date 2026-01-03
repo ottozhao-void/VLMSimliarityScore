@@ -11,8 +11,10 @@ export function usePrediction() {
         sourceAText: string,
         sourceBText: string,
         sourceAFile: File | null,
+
         sourceBFile: File | null,
-        reparamSigma: number,
+        reparamSigmaA: number,
+        reparamSigmaB: number,
         textEmbedType: string
     ) => {
         setCalculating(true);
@@ -29,7 +31,8 @@ export function usePrediction() {
         if (sourceAFile) formData.append('source_a_file', sourceAFile);
         if (sourceBFile) formData.append('source_b_file', sourceBFile);
 
-        formData.append('reparam_sigma', String(reparamSigma));
+        formData.append('reparam_sigma_a', String(reparamSigmaA));
+        formData.append('reparam_sigma_b', String(reparamSigmaB));
         formData.append('text_embed_type', textEmbedType);
 
         try {
