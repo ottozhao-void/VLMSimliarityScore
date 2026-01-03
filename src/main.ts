@@ -446,7 +446,8 @@ calculateBtn.addEventListener('click', async () => {
                             tooltip: {
                                 callbacks: {
                                     label: function (context) {
-                                        return `Score: ${context.parsed.y.toFixed(4)}`;
+                                        const val = context.parsed.y;
+                                        return val !== null ? `Score: ${val.toFixed(4)}` : '';
                                     }
                                 }
                             }
@@ -468,7 +469,7 @@ calculateBtn.addEventListener('click', async () => {
                                 }
                             }
                         },
-                        onClick: (e, elements) => {
+                        onClick: (_e, elements) => {
                             if (elements.length > 0) {
                                 const index = elements[0].index;
                                 const time = data.frames[index].time;
