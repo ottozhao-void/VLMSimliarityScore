@@ -151,7 +151,13 @@ export default function MainContent({ state, onCalculate, calculating, results }
                         interaction: { mode: 'index', intersect: false },
                         plugins: { legend: { display: true } },
                         scales: {
-                            y: { min: -1, max: 1, title: { display: true, text: 'Cosine Similarity' } }
+                            y: {
+                                min: 0,
+                                max: 1,
+                                beginAtZero: true,
+                                suggestedMin: 0,
+                                title: { display: true, text: 'Cosine Similarity' }
+                            }
                         }
                     }
                 });
