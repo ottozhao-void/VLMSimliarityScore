@@ -79,6 +79,8 @@ The project appears to have two components:
 *   **Model Handling:** Models are loaded lazily or via explicit user action to manage memory usage.
 *   **Environment:** The app is designed to run locally, with optional GPU support.
 
+## Code 
+
 ## Key Files to Reference
 
 *   **`main.py`**: Core logic for model loading, inference, and API routing.

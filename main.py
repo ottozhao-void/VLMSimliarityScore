@@ -62,12 +62,55 @@ async def load_model(request: LoadModelRequest):
         print(f"Error loading model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+import cv2
+import tempfile
+import os
+import numpy as np
+
+def extract_frames(video_path, fps=1):
+    """Extracts frames from video at specified FPS."""
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return [], []
+    
+    video_fps = cap.get(cv2.CAP_PROP_FPS)
+    duration = cap.get(cv2.CAP_PROP_FRAME_COUNT) / video_fps
+    
+    frames = []
+    timestamps = []
+    
+    # Calculate interval in frames
+    interval = int(video_fps / fps)
+    if interval < 1: interval = 1
+    
+    current_frame = 0
+    while True:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+        ret, frame = cap.read()
+        if not ret:
+            break
+            
+        # Convert BGR to RGB (OpenCV uses BGR)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frames.append(Image.fromarray(frame_rgb))
+        timestamps.append(current_frame / video_fps)
+        
+        current_frame += interval
+        
+    cap.release()
+    return frames, timestamps
+
 @app.post("/api/predict")
 async def predict(
     image_source: str = Form("Image"),
     text_source: str = Form("Text"),
     text: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None)
+    image: Optional[UploadFile] = File(None),
+    video: Optional[UploadFile] = File(None)
 ):
     if not state.model or not state.processor:
         raise HTTPException(status_code=400, detail="Model not loaded")
@@ -81,8 +124,90 @@ async def predict(
 
         text_embeds = None
         image_embeds = None
+        
+        # Video Processing
+        video_results = []
+        is_video = False
+        
+        if image_source == "Video" and video:
+            is_video = True
+            # Save temp file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+                tmp.write(await video.read())
+                tmp_path = tmp.name
+            
+            try:
+                # Extract frames
+                frames, timestamps = extract_frames(tmp_path, fps=1)
+                
+                if not frames:
+                     raise HTTPException(status_code=400, detail="Could not extract frames from video")
 
-        # Image Processing
+                # Process text first to have it ready
+                if text_source == "Text" and text:
+                    text_inputs = state.processor(text=[text], padding="max_length", truncation=True, return_tensors="pt").to(state.device)
+                    with torch.no_grad():
+                        text_outputs = state.model.get_text_features(**text_inputs)
+                    text_embeds = normalize(text_outputs)
+                elif text_source == "Random":
+                     # ... existing random text logic ...
+                    dim = 512
+                    if hasattr(state.model, "config"):
+                        if hasattr(state.model.config, "projection_dim"):
+                            dim = state.model.config.projection_dim
+                        elif hasattr(state.model.config, "hidden_size"):
+                            dim = state.model.config.hidden_size
+                    text_embeds = normalize(torch.randn(1, dim).to(state.device))
+                
+                if text_embeds is None:
+                     raise HTTPException(status_code=400, detail="Text source required for video analysis")
+                
+                # Process frames in batches
+                batch_size = 4
+                all_scores = []
+                
+                for i in range(0, len(frames), batch_size):
+                    batch_frames = frames[i:i+batch_size]
+                    batch_inputs = state.processor(images=batch_frames, return_tensors="pt").to(state.device)
+                    
+                    with torch.no_grad():
+                        batch_outputs = state.model.get_image_features(**batch_inputs)
+                    
+                    batch_embeds = normalize(batch_outputs)
+                    
+                    # Compute similarity for this batch
+                    # text_embeds: [1, D], batch_embeds: [B, D] -> [1, B]
+                    sims = (text_embeds @ batch_embeds.T).squeeze(0).cpu().numpy()
+                    
+                    if len(batch_frames) == 1:
+                        all_scores.append(float(sims))
+                    else:
+                        all_scores.extend([float(s) for s in sims])
+
+                # Construct results
+                for t, s in zip(timestamps, all_scores):
+                     video_results.append({"time": t, "score": max(-1.0, min(1.0, s))})
+                     
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+            
+            end_time = time.time()
+            duration_ms = (end_time - start_time) * 1000
+            
+            # Find best frame
+            best_frame = max(video_results, key=lambda x: x['score']) if video_results else None
+            avg_score = sum(r['score'] for r in video_results) / len(video_results) if video_results else 0
+            
+            return {
+                "type": "video",
+                "frames": video_results,
+                "average_score": avg_score,
+                "best_frame": best_frame,
+                "time": duration_ms
+            }
+
+        # Image Processing (Existing Logic)
         if image_source == "Random":
             # Generate random vector
             # We need to know embedding dimension.

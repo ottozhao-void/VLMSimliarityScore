@@ -7,6 +7,7 @@
     <title>VLM Similarity Scorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Custom animations */
         @keyframes fadeIn {
@@ -64,7 +65,7 @@
                             <select id="image-source"
                                 class="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8">
                                 <option value="Image">Upload Image</option>
-                                <option value="Video">Video (Not Implemented)</option>
+                                <option value="Video">Upload Video</option>
                                 <option value="Random">Random Vector</option>
                             </select>
                             <i data-lucide="chevron-down"
@@ -98,6 +99,35 @@
                             <button id="clear-image-btn"
                                 class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 mt-2 w-full justify-center">
                                 <i data-lucide="x" width="14" height="14"></i> Clear Image
+                            </button>
+                        </div>
+
+                        <!-- VIDEO INPUTS -->
+                        <div id="video-drop-zone-container" class="pt-2 hidden">
+                            <div id="video-drop-zone"
+                                class="border-2 border-dashed border-gray-300 rounded-xl h-48 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                                <input type="file" id="video-input" class="hidden"
+                                    accept="video/mp4, video/webm, video/ogg">
+
+                                <!-- Placeholder -->
+                                <div id="video-drop-placeholder"
+                                    class="flex flex-col items-center gap-2 text-gray-400 group-hover:text-gray-600">
+                                    <div class="p-3 bg-white rounded-full shadow-sm">
+                                        <i data-lucide="video" width="24" height="24"></i>
+                                    </div>
+                                    <div class="text-center px-4">
+                                        <p class="text-xs font-medium text-gray-900">Click to upload video</p>
+                                    </div>
+                                </div>
+
+                                <!-- Preview -->
+                                <video id="video-preview" controls
+                                    class="hidden w-full h-full object-contain p-2 rounded-lg shadow-sm"></video>
+                            </div>
+                            <!-- Clear Button -->
+                            <button id="clear-video-btn"
+                                class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 mt-2 w-full justify-center">
+                                <i data-lucide="x" width="14" height="14"></i> Clear Video
                             </button>
                         </div>
                         <!-- Random Placeholder -->
@@ -280,6 +310,18 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Chart Section -->
+                        <div id="chart-container"
+                            class="mt-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hidden">
+                            <div class="flex items-center gap-2 mb-4 text-gray-500">
+                                <i data-lucide="activity" width="20" height="20"></i>
+                                <span class="text-sm font-medium uppercase tracking-wider">Similarity Timeline</span>
+                            </div>
+                            <div class="relative h-64 w-full">
+                                <canvas id="similarity-chart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -319,6 +361,15 @@
         const dropPlaceholder = document.getElementById('drop-placeholder');
         const imagePreview = document.getElementById('image-preview');
         const clearImageBtn = document.getElementById('clear-image-btn');
+
+        const videoDropZone = document.getElementById('video-drop-zone');
+        const videoDropZoneContainer = document.getElementById('video-drop-zone-container');
+        const videoInput = document.getElementById('video-input');
+        const videoDropPlaceholder = document.getElementById('video-drop-placeholder');
+        const videoPreview = document.getElementById('video-preview');
+        const clearVideoBtn = document.getElementById('clear-video-btn');
+        let selectedVideo = null;
+        let chartInstance = null;
 
         const textInput = document.getElementById('text-input');
         const textInputContainer = document.getElementById('text-input-container');
@@ -402,8 +453,13 @@
 
         function updateCalculateButton() {
             const hasText = textSourceSelect.value === 'Random' || textInput.value.trim().length > 0;
-            const hasImage = imageSourceSelect.value === 'Random' || selectedImage !== null;
-            const ready = isModelLoaded && hasText && hasImage;
+            let hasMedia = false;
+
+            if (imageSourceSelect.value === 'Image') hasMedia = selectedImage !== null;
+            else if (imageSourceSelect.value === 'Video') hasMedia = selectedVideo !== null;
+            else if (imageSourceSelect.value === 'Random') hasMedia = true;
+
+            const ready = isModelLoaded && hasText && hasMedia;
 
             if (ready) {
                 calculateBtn.disabled = false;
@@ -423,13 +479,17 @@
             const val = e.target.value;
             if (val === 'Random') {
                 dropZoneContainer.classList.add('hidden');
+                videoDropZoneContainer.classList.add('hidden');
                 imageRandomPlaceholder.classList.remove('hidden');
+            } else if (val === 'Video') {
+                dropZoneContainer.classList.add('hidden');
+                videoDropZoneContainer.classList.remove('hidden');
+                imageRandomPlaceholder.classList.add('hidden');
             } else {
                 dropZoneContainer.classList.remove('hidden');
+                videoDropZoneContainer.classList.add('hidden');
                 imageRandomPlaceholder.classList.add('hidden');
             }
-            // If Video is selected (not implemented), maybe show alert?
-            // For now, Video behaves like Image but without implementation logic as per req.
             updateCalculateButton();
         });
 
@@ -559,6 +619,61 @@
             updateCalculateButton();
         });
 
+        // Video Handling
+        function handleVideoFile(file) {
+            if (!file || !file.type.startsWith('video/')) return;
+            selectedVideo = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                videoPreview.src = e.target.result;
+                videoPreview.classList.remove('hidden');
+                videoDropPlaceholder.classList.add('hidden');
+                videoDropZone.classList.add('border-gray-200', 'bg-gray-50');
+                videoDropZone.classList.remove('hover:border-black', 'hover:bg-gray-100', 'cursor-pointer');
+                clearVideoBtn.classList.remove('hidden');
+                updateCalculateButton();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        videoDropZone.addEventListener('click', () => {
+            if (!selectedVideo) videoInput.click();
+        });
+
+        videoDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.add('border-black', 'bg-gray-100');
+        });
+
+        videoDropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.remove('border-black', 'bg-gray-100');
+        });
+
+        videoDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.remove('border-black', 'bg-gray-100');
+            handleVideoFile(e.dataTransfer.files[0]);
+        });
+
+        videoInput.addEventListener('change', (e) => handleVideoFile(e.target.files[0]));
+
+        clearVideoBtn.addEventListener('click', () => {
+            selectedVideo = null;
+            videoInput.value = '';
+            videoPreview.pause();
+            videoPreview.src = '';
+            videoPreview.classList.add('hidden');
+            videoDropPlaceholder.classList.remove('hidden');
+            clearVideoBtn.classList.add('hidden');
+
+            // Reset styles
+            videoDropZone.classList.remove('border-gray-200', 'bg-gray-50');
+            videoDropZone.classList.add('border-gray-300', 'hover:border-black', 'bg-gray-50', 'hover:bg-gray-100', 'cursor-pointer');
+
+            updateCalculateButton();
+        });
+
         textInput.addEventListener('input', updateCalculateButton);
 
         // Calculation
@@ -577,6 +692,8 @@
 
             if (imageSourceSelect.value === 'Image' && selectedImage) {
                 formData.append('image', selectedImage);
+            } else if (imageSourceSelect.value === 'Video' && selectedVideo) {
+                formData.append('video', selectedVideo);
             }
 
             if (textSourceSelect.value === 'Text') {
@@ -593,13 +710,97 @@
 
                 const data = await res.json();
 
-                scoreValue.innerText = data.score.toFixed(4);
-                if (data.angle !== undefined) {
-                    angleValue.innerText = data.angle.toFixed(2);
+
+
+                if (data.type === 'video') {
+                    // Video Results
+                    scoreValue.innerText = data.average_score.toFixed(4);
+                    angleValue.innerText = '-'; // Average angle? or just hide it
+                    timeValue.innerText = data.time.toFixed(0) + ' ms';
+                    modelUsedValue.innerText = currentModelId;
+
+                    document.getElementById('chart-container').classList.remove('hidden');
+                    resultsSection.classList.remove('hidden');
+
+                    // Render Chart
+                    const ctx = document.getElementById('similarity-chart').getContext('2d');
+
+                    if (chartInstance) {
+                        chartInstance.destroy();
+                    }
+
+                    const labels = data.frames.map(f => f.time.toFixed(1) + 's');
+                    const scores = data.frames.map(f => f.score);
+
+                    chartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Similarity Score',
+                                data: scores,
+                                borderColor: 'rgb(0, 0, 0)',
+                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                tension: 0.3,
+                                fill: true,
+                                pointRadius: 2,
+                                pointHoverRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (context) {
+                                            return `Score: ${context.parsed.y.toFixed(4)}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    suggestedMin: -0.1,
+                                    suggestedMax: 1.0,
+                                    title: {
+                                        display: true,
+                                        text: 'Similarity'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Time (s)'
+                                    }
+                                }
+                            },
+                            onClick: (e, elements) => {
+                                if (elements.length > 0) {
+                                    const index = elements[0].index;
+                                    const time = data.frames[index].time;
+                                    videoPreview.currentTime = time;
+                                    videoPreview.play();
+                                }
+                            }
+                        }
+                    });
+
+                } else {
+                    // Image Results
+                    scoreValue.innerText = data.score.toFixed(4);
+                    if (data.angle !== undefined) {
+                        angleValue.innerText = data.angle.toFixed(2);
+                    }
+                    timeValue.innerText = data.time.toFixed(0) + ' ms';
+                    modelUsedValue.innerText = currentModelId;
+                    document.getElementById('chart-container').classList.add('hidden');
+                    resultsSection.classList.remove('hidden');
                 }
-                timeValue.innerText = data.time.toFixed(0) + ' ms';
-                modelUsedValue.innerText = currentModelId;
-                resultsSection.classList.remove('hidden');
 
             } catch (err) {
                 console.error(err);
