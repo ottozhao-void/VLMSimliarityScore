@@ -47,14 +47,24 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
     const fileInputARef = useRef<HTMLInputElement>(null);
     const fileInputBRef = useRef<HTMLInputElement>(null);
 
-    const handleFileDrop = (e: React.DragEvent, target: 'A' | 'B', expectedType: SourceType) => {
+    const handleFileDrop = (
+        e: React.DragEvent,
+        setType: (t: SourceType) => void,
+        setFile: (f: File | null) => void
+    ) => {
         e.preventDefault();
+        e.stopPropagation();
+
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
-            const setter = target === 'A' ? setSourceAFile : setSourceBFile;
 
-            if (expectedType === 'Image' && file.type.startsWith('image/')) setter(file);
-            if (expectedType === 'Video' && file.type.startsWith('video/')) setter(file);
+            if (file.type.startsWith('image/')) {
+                setType('Image');
+                setFile(file);
+            } else if (file.type.startsWith('video/')) {
+                setType('Video');
+                setFile(file);
+            }
         }
     };
 
@@ -74,8 +84,23 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         setTextEmbedTypeLocal: (t: TextEmbedType) => void
     ) => {
         return (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition-all hover:shadow-md">
-                <div className="flex items-center justify-between mb-3">
+            <div
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition-all hover:shadow-md relative group/section"
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+                onDrop={(e) => handleFileDrop(e, setType, setFileVal)}
+            >
+                {/* Drag Overlay Feedback */}
+                <div className="absolute inset-0 bg-black/5 border-2 border-black/10 z-50 rounded-xl hidden group-hover/section:flex pointer-events-none items-center justify-center backdrop-blur-[1px]">
+                    <div className="bg-white px-4 py-2 rounded-full shadow-sm text-xs font-semibold text-gray-700 flex items-center gap-2">
+                        <UploadCloud size={14} />
+                        <span>Drop to replace</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between mb-3 relative z-10">
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{label}</span>
                     <div className="flex items-center gap-2">
                         {/* Reparam Toggle */}
@@ -89,7 +114,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                     </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 relative z-10">
                     <div className="relative">
                         <select
                             value={type}
@@ -120,8 +145,6 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                 {!fileVal ? (
                                     <div
                                         onClick={() => inputRef.current?.click()}
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => handleFileDrop(e, target, type)}
                                         className="border-2 border-dashed border-gray-200 rounded-lg h-24 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black/20 hover:bg-gray-50 cursor-pointer"
                                     >
                                         <input
