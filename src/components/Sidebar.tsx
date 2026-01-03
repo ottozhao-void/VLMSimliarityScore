@@ -17,7 +17,8 @@ interface SidebarProps {
         setReparamSigma: (n: number) => void;
         setUseReparamA: (b: boolean) => void;
         setUseReparamB: (b: boolean) => void;
-        setTextEmbedType: (t: TextEmbedType) => void;
+        setTextEmbedTypeA: (t: TextEmbedType) => void;
+        setTextEmbedTypeB: (t: TextEmbedType) => void;
     };
     onLoadModel: () => void;
     modelStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -39,7 +40,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         reparamSigma, setReparamSigma,
         useReparamA, setUseReparamA,
         useReparamB, setUseReparamB,
-        textEmbedType, setTextEmbedType
+        textEmbedTypeA, setTextEmbedTypeA,
+        textEmbedTypeB, setTextEmbedTypeB
     } = state;
 
     const fileInputARef = useRef<HTMLInputElement>(null);
@@ -67,7 +69,9 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         inputRef: any,
         target: 'A' | 'B',
         useReparam: boolean,
-        setUseReparam: (b: boolean) => void
+        setUseReparam: (b: boolean) => void,
+        textEmbedTypeLocal: TextEmbedType,
+        setTextEmbedTypeLocal: (t: TextEmbedType) => void
     ) => {
         return (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition-all hover:shadow-md">
@@ -160,6 +164,47 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             </div>
                         )}
                     </div>
+
+                    {/* Text Strategy (inline, only when type is Text) */}
+                    {type === 'Text' && (
+                        <div className="pt-1">
+                            <span className="text-[10px] font-semibold text-gray-500 block mb-2">Text Strategy</span>
+                            <div className="flex gap-2">
+                                <label className="flex-1 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name={`textStrategy-${target}`}
+                                        value="projected"
+                                        checked={textEmbedTypeLocal === 'projected'}
+                                        onChange={() => setTextEmbedTypeLocal('projected')}
+                                        className="sr-only"
+                                    />
+                                    <div className={`py-1.5 rounded-md text-xs font-medium border text-center transition-all ${textEmbedTypeLocal === 'projected'
+                                            ? 'bg-black text-white border-black'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                                        }`}>
+                                        Projected
+                                    </div>
+                                </label>
+                                <label className="flex-1 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name={`textStrategy-${target}`}
+                                        value="pooler_output"
+                                        checked={textEmbedTypeLocal === 'pooler_output'}
+                                        onChange={() => setTextEmbedTypeLocal('pooler_output')}
+                                        className="sr-only"
+                                    />
+                                    <div className={`py-1.5 rounded-md text-xs font-medium border text-center transition-all ${textEmbedTypeLocal === 'pooler_output'
+                                            ? 'bg-black text-white border-black'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                                        }`}>
+                                        Pooler
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -202,14 +247,14 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                 {/* Source Settings */}
                 {tab === 'source' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
-                        {renderSourceSection("Source A", sourceAType, setSourceAType, sourceAText, setSourceAText, sourceAFile, setSourceAFile, fileInputARef, 'A', useReparamA, setUseReparamA)}
+                        {renderSourceSection("Source A", sourceAType, setSourceAType, sourceAText, setSourceAText, sourceAFile, setSourceAFile, fileInputARef, 'A', useReparamA, setUseReparamA, textEmbedTypeA, setTextEmbedTypeA)}
 
                         <div className="relative flex items-center py-2">
                             <div className="w-full border-t border-gray-200"></div>
                             <span className="absolute left-1/2 -translate-x-1/2 bg-[#fafafa] px-2 text-[10px] font-bold text-gray-300 uppercase tracking-widest">VS</span>
                         </div>
 
-                        {renderSourceSection("Source B", sourceBType, setSourceBType, sourceBText, setSourceBText, sourceBFile, setSourceBFile, fileInputBRef, 'B', useReparamB, setUseReparamB)}
+                        {renderSourceSection("Source B", sourceBType, setSourceBType, sourceBText, setSourceBText, sourceBFile, setSourceBFile, fileInputBRef, 'B', useReparamB, setUseReparamB, textEmbedTypeB, setTextEmbedTypeB)}
 
                         {/* Sigma Slider (Conditional) */}
                         {(useReparamA || useReparamB) && (
@@ -235,28 +280,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             </div>
                         )}
 
-                        {/* Text Embedding Strategy (Location Moved) */}
-                        {(sourceAType === 'Text' || sourceBType === 'Text') && (
-                            <div className="bg-white rounded-xl border border-gray-200 p-4 animate-in zoom-in-95 duration-200">
-                                <span className="text-xs font-bold text-gray-900 block mb-3">Text Strategy</span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setTextEmbedType('projected')}
-                                        className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${textEmbedType === 'projected' ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                                            }`}
-                                    >
-                                        Projected
-                                    </button>
-                                    <button
-                                        onClick={() => setTextEmbedType('pooler_output')}
-                                        className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${textEmbedType === 'pooler_output' ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                                            }`}
-                                    >
-                                        Pooler
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+
 
                     </div>
                 )}

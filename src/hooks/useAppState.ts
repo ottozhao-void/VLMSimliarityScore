@@ -4,6 +4,9 @@ export type SourceType = 'Image' | 'Video' | 'Text' | 'Random';
 export type Tab = 'source' | 'general';
 export type TextEmbedType = 'projected' | 'pooler_output';
 
+// Helper type for source-aware state setters
+export type SourceTypeWithClear = (t: SourceType) => void;
+
 export interface AppState {
     tab: Tab;
     sourceAType: SourceType;
@@ -20,14 +23,15 @@ export interface AppState {
     reparamSigma: number;
     useReparamA: boolean;
     useReparamB: boolean;
-    textEmbedType: TextEmbedType;
+    textEmbedTypeA: TextEmbedType;
+    textEmbedTypeB: TextEmbedType;
 }
 
 export function useAppState() {
     const [tab, setTab] = useState<Tab>('source');
 
-    const [sourceAType, setSourceAType] = useState<SourceType>('Video'); // Default A
-    const [sourceBType, setSourceBType] = useState<SourceType>('Text');  // Default B
+    const [sourceAType, setSourceATypeInternal] = useState<SourceType>('Video'); // Default A
+    const [sourceBType, setSourceBTypeInternal] = useState<SourceType>('Text');  // Default B
 
     const [sourceAText, setSourceAText] = useState<string>('');
     const [sourceBText, setSourceBText] = useState<string>('');
@@ -42,7 +46,25 @@ export function useAppState() {
     const [reparamSigma, setReparamSigma] = useState<number>(0.0);
     const [useReparamA, setUseReparamA] = useState<boolean>(false);
     const [useReparamB, setUseReparamB] = useState<boolean>(false);
-    const [textEmbedType, setTextEmbedType] = useState<TextEmbedType>('projected');
+    const [textEmbedTypeA, setTextEmbedTypeA] = useState<TextEmbedType>('projected');
+    const [textEmbedTypeB, setTextEmbedTypeB] = useState<TextEmbedType>('projected');
+
+    // Wrapper setters that clear content when source type changes
+    const setSourceAType = (newType: SourceType) => {
+        if (newType !== sourceAType) {
+            setSourceAFile(null);
+            setSourceAText('');
+        }
+        setSourceATypeInternal(newType);
+    };
+
+    const setSourceBType = (newType: SourceType) => {
+        if (newType !== sourceBType) {
+            setSourceBFile(null);
+            setSourceBText('');
+        }
+        setSourceBTypeInternal(newType);
+    };
 
     return {
         tab, setTab,
@@ -58,6 +80,7 @@ export function useAppState() {
         reparamSigma, setReparamSigma,
         useReparamA, setUseReparamA,
         useReparamB, setUseReparamB,
-        textEmbedType, setTextEmbedType
+        textEmbedTypeA, setTextEmbedTypeA,
+        textEmbedTypeB, setTextEmbedTypeB
     };
 }

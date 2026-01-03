@@ -31,7 +31,8 @@ async def predict(
     source_b_file: Optional[UploadFile] = File(None),
     reparam_sigma_a: float = Form(0.0),
     reparam_sigma_b: float = Form(0.0),
-    text_embed_type: str = Form("projected") # "projected" or "pooler"
+    text_embed_type_a: str = Form("projected"),  # "projected" or "pooler_output"
+    text_embed_type_b: str = Form("projected")   # "projected" or "pooler_output"
 ):
     if not state.has_model():
         raise HTTPException(status_code=400, detail="Model not loaded")
@@ -41,7 +42,7 @@ async def predict(
     
     try:
         # Helper to get embeddings
-        async def get_embeddings(source_type: str, text_val: Optional[str], file_val: Optional[UploadFile], sigma: float):
+        async def get_embeddings(source_type: str, text_val: Optional[str], file_val: Optional[UploadFile], sigma: float, text_embed_type: str):
             embeds = None
             timestamps = None
             is_video = False
@@ -96,8 +97,8 @@ async def predict(
             return embeds, timestamps, is_video
 
         # 1. Get Embeddings for A and B
-        embeds_a, timestamps_a, is_video_a = await get_embeddings(source_a_type, source_a_text, source_a_file, reparam_sigma_a)
-        embeds_b, timestamps_b, is_video_b = await get_embeddings(source_b_type, source_b_text, source_b_file, reparam_sigma_b)
+        embeds_a, timestamps_a, is_video_a = await get_embeddings(source_a_type, source_a_text, source_a_file, reparam_sigma_a, text_embed_type_a)
+        embeds_b, timestamps_b, is_video_b = await get_embeddings(source_b_type, source_b_text, source_b_file, reparam_sigma_b, text_embed_type_b)
         
         # 2. Compute Similarity based on types
         res_type = "scalar"

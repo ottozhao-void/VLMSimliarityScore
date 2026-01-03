@@ -28,7 +28,8 @@ export default function App() {
             appState.sourceBFile,
             sigmaA,
             sigmaB,
-            appState.textEmbedType
+            appState.textEmbedTypeA,
+            appState.textEmbedTypeB
         );
     };
 
