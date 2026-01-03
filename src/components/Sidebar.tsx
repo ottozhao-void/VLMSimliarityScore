@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Type, MoreHorizontal } from 'lucide-react';
+import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, MoreHorizontal } from 'lucide-react';
 import { SourceType, AppState, TextEmbedType } from '../hooks/useAppState';
 
 interface SidebarProps {
@@ -60,7 +60,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         setTextVal: (s: string) => void,
         fileVal: File | null,
         setFileVal: (f: File | null) => void,
-        inputRef: React.RefObject<HTMLInputElement>,
+        inputRef: any,
         target: 'A' | 'B'
     ) => {
         return (
@@ -161,13 +161,13 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
             <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg mb-6">
                 <button
                     onClick={() => setTab('general')}
-                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${tab === 'general' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                    className={`flex - 1 px - 3 py - 1.5 text - sm font - medium rounded - md transition - all ${tab === 'general' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'} `}
                 >
                     General
                 </button>
                 <button
                     onClick={() => setTab('source')}
-                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${tab === 'source' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                    className={`flex - 1 px - 3 py - 1.5 text - sm font - medium rounded - md transition - all ${tab === 'source' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'} `}
                 >
                     Source
                 </button>
@@ -271,13 +271,13 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                 <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-md">
                                     <button
                                         onClick={() => setTextEmbedType('projected')}
-                                        className={`flex-1 text-xs py-1.5 rounded transition-all ${textEmbedType === 'projected' ? 'bg-white shadow-sm font-medium text-black' : 'text-gray-500 hover:text-gray-700'}`}
+                                        className={`flex - 1 text - xs py - 1.5 rounded transition - all ${textEmbedType === 'projected' ? 'bg-white shadow-sm font-medium text-black' : 'text-gray-500 hover:text-gray-700'} `}
                                     >
                                         Projected
                                     </button>
                                     <button
                                         onClick={() => setTextEmbedType('pooler_output')}
-                                        className={`flex-1 text-xs py-1.5 rounded transition-all ${textEmbedType === 'pooler_output' ? 'bg-white shadow-sm font-medium text-black' : 'text-gray-500 hover:text-gray-700'}`}
+                                        className={`flex - 1 text - xs py - 1.5 rounded transition - all ${textEmbedType === 'pooler_output' ? 'bg-white shadow-sm font-medium text-black' : 'text-gray-500 hover:text-gray-700'} `}
                                     >
                                         Pooler Output
                                     </button>
@@ -308,7 +308,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                         {/* GPU Setting */}
                         <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-md transition-colors ${useGpu ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
+                                <div className={`p - 2 rounded - md transition - colors ${useGpu ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'} `}>
                                     {useGpu ? <Zap size={18} /> : <Cpu size={18} />}
                                 </div>
                                 <div className="flex flex-col">
@@ -317,9 +317,9 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             </div>
                             <button
                                 onClick={() => setUseGpu(!useGpu)}
-                                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGpu ? 'bg-black' : 'bg-gray-200'}`}
+                                className={`relative inline - flex h - 5 w - 9 flex - shrink - 0 cursor - pointer rounded - full border - 2 border - transparent transition - colors duration - 200 ease -in -out focus: outline - none ${useGpu ? 'bg-black' : 'bg-gray-200'} `}
                             >
-                                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGpu ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                                <span className={`pointer - events - none inline - block h - 4 w - 4 transform rounded - full bg - white shadow ring - 0 transition duration - 200 ease -in -out ${useGpu ? 'translate-x-4' : 'translate-x-0'} `}></span>
                             </button>
                         </div>
                     </div>

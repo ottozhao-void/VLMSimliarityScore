@@ -8,10 +8,11 @@ import { usePrediction } from './hooks/usePrediction';
 export default function App() {
     const appState = useAppState();
     const { status: modelStatus, message: modelMsg, loadModel } = useModel();
-    const { predict, calculating, results, error } = usePrediction();
+    const { predict, calculating, results } = usePrediction();
 
     const handleLoadModel = async () => {
-        await loadModel(appState.modelPreset, appState.customModelId, appState.useGpu);
+        const id = appState.modelPreset === 'custom' ? appState.customModelId : appState.modelPreset;
+        await loadModel(id, appState.useGpu);
     };
 
     const handleCalculate = async () => {

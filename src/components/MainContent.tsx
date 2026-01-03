@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, BarChart3, Clock, Grid, Image as ImageIcon, Video as VideoIcon, Activity, MousePointer2 } from 'lucide-react';
+import { Play, BarChart3, Clock, Grid, Activity, MousePointer2 } from 'lucide-react';
 import Chart from 'chart.js/auto';
 import { AppState } from '../hooks/useAppState';
 
