@@ -315,8 +315,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                         onChange={(e) => setModelPreset(e.target.value)}
                                         className="w-full appearance-none px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all pr-8 shadow-sm"
                                     >
-                                        <option value="openai/clip-vit-large-patch14">OpenAI CLIP ViT-Large</option>
                                         <option value="Xenova/clip-vit-base-patch32">CLIP ViT-Base Patch32</option>
+                                        <option value="openai/clip-vit-large-patch14">OpenAI CLIP ViT-Large</option>
                                         <option value="custom">Custom (Hugging Face ID)</option>
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />

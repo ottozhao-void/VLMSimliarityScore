@@ -39,7 +39,7 @@ export function useAppState() {
     const [sourceAFile, setSourceAFile] = useState<File | null>(null);
     const [sourceBFile, setSourceBFile] = useState<File | null>(null);
 
-    const [modelPreset, setModelPreset] = useState<string>('openai/clip-vit-large-patch14');
+    const [modelPreset, setModelPreset] = useState<string>('Xenova/clip-vit-base-patch32');
     const [customModelId, setCustomModelId] = useState<string>('');
     const [useGpu, setUseGpu] = useState<boolean>(true);
 

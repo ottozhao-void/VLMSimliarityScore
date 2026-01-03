@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import { useAppState } from './hooks/useAppState';
@@ -14,6 +15,11 @@ export default function App() {
         const id = appState.modelPreset === 'custom' ? appState.customModelId : appState.modelPreset;
         await loadModel(id, appState.useGpu);
     };
+
+    useEffect(() => {
+        handleLoadModel();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleCalculate = async () => {
         const sigmaA = appState.useReparamA ? appState.reparamSigma : 0;
