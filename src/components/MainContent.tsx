@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Play, BarChart3, Clock, Grid, Activity, MousePointer2 } from 'lucide-react';
-import Chart from 'chart.js/auto';
-import { AppState } from '../hooks/useAppState';
+import { AppState, isSourceReady } from '../hooks/useAppState';
+import { useSimilarityChart } from '../hooks/useSimilarityChart';
+import { useHeatmapChart } from '../hooks/useHeatmapChart';
 
 interface MainContentProps {
     state: AppState;
@@ -11,188 +12,32 @@ interface MainContentProps {
 }
 
 export default function MainContent({ state, onCalculate, calculating, results }: MainContentProps) {
-    const {
-        sourceAType, sourceBType, sourceAText, sourceBText, sourceAFile, sourceBFile,
-    } = state;
+    const chartRef = useRef<HTMLCanvasElement | null>(null);
+    const heatmapRef = useRef<HTMLCanvasElement | null>(null);
 
-    const chartRef = useRef<HTMLCanvasElement>(null);
-    const heatmapRef = useRef<HTMLCanvasElement>(null);
-    const chartInstance = useRef<Chart | null>(null);
-
-    const [hoverInfo, setHoverInfo] = useState<{ r: number, c: number, val: number } | null>(null);
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [showUpperTriangle, setShowUpperTriangle] = useState(false);
 
-    const isReady = (
-        (sourceAType !== 'Text' || sourceAText.length > 0) &&
-        (sourceBType !== 'Text' || sourceBText.length > 0) &&
-        (sourceAType !== 'Image' && sourceAType !== 'Video' || sourceAFile) &&
-        (sourceBType !== 'Image' && sourceBType !== 'Video' || sourceBFile)
-    );
+    // Use extracted hooks for chart logic
+    useSimilarityChart(chartRef, results, selectedRow);
 
-    // Render Heatmap
-    useEffect(() => {
-        if (results && results.type === 'matrix' && heatmapRef.current && results.matrix) {
-            const canvas = heatmapRef.current;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                const matrix = results.matrix.matrix; // [Rows, Cols]
-                const rows = matrix.length;
-                const cols = matrix[0].length;
+    const { hoverInfo, handleHeatmapMove, handleHeatmapLeave } = useHeatmapChart({
+        heatmapRef,
+        results,
+        selectedRow,
+        showUpperTriangle
+    });
 
-                // Canvas logic: fixed size or responsive? 
-                // Let's use computed width
-                const width = canvas.width = canvas.parentElement?.clientWidth || 600;
-                const height = canvas.height = Math.min(600, width * (rows / cols)); // Aspect ratio
+    // Use helper function from useAppState
+    const isReady = isSourceReady(state);
 
-                // Clear canvas before redrawing (important for toggle)
-                ctx.clearRect(0, 0, width, height);
-
-                const cellW = width / cols;
-                const cellH = height / rows;
-
-                for (let i = 0; i < rows; i++) {
-                    for (let j = 0; j < cols; j++) {
-                        // Upper Triangle Toggle:
-                        // Upper triangle means col index >= row index (j >= i)
-                        // So if we only want upper triangle, we skip if i > j
-                        if (showUpperTriangle && i > j) continue;
-
-                        const val = matrix[i][j]; // -1 to 1
-                        // Map -1..1 to hue. 
-                        // Simple: Red (val=1) to Blue (val=-1)?
-                        // Let's try "Thermal": Black/Purple -> Red -> Yellow -> White
-                        // Simply: use Red channel opacity or lightness
-
-                        // Robust Color Map (Blue -> Red)
-                        // val is -1 to 1. Clamped 0 to 1 for simple mapping if negative is rare?
-                        // But cosine can be negative.
-                        // Map [-1, 1] -> [0, 1] relative
-                        const norm = (val + 1) / 2;
-                        // Hue: 240 (Blue) -> 0 (Red)
-                        const hue = (1 - norm) * 240;
-                        ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
-                        ctx.fillRect(j * cellW, i * cellH, cellW, cellH);
-                    }
-                }
-
-                if (selectedRow !== null) {
-                    // Highlight row
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(0, selectedRow * cellH, width, cellH);
-                }
-            }
-        }
-    }, [results, selectedRow, showUpperTriangle]);
-
-    // Handle Matrix Interaction
-    const handleHeatmapMove = (e: React.MouseEvent) => {
-        if (!results || results.type !== 'matrix' || !heatmapRef.current) return;
-        const rect = heatmapRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const matrix = results.matrix.matrix;
-        const rows = matrix.length;
-        const cols = matrix[0].length;
-
-        const cellW = rect.width / cols;
-        const cellH = rect.height / rows;
-
-        const c = Math.floor(x / cellW);
-        const r = Math.floor(y / cellH);
-
-        if (r >= 0 && r < rows && c >= 0 && c < cols) {
-            // If upper triangle only, ignore hover on lower triangle
-            if (showUpperTriangle && r > c) {
-                setHoverInfo(null);
-                return;
-            }
-            setHoverInfo({ r, c, val: matrix[r][c] });
-        } else {
-            setHoverInfo(null);
-        }
-    };
-
+    // Handle heatmap row selection
     const handleHeatmapClick = () => {
         if (hoverInfo) {
             setSelectedRow(hoverInfo.r);
         }
     };
 
-    // Render Line Chart (Curve or specific row from Matrix)
-    useEffect(() => {
-        // Condition: Type is Curve OR (Type is Matrix AND selectedRow is valid)
-        const showChart = (results?.type === 'curve') || (results?.type === 'matrix' && selectedRow !== null);
-
-        if (showChart && chartRef.current) {
-            if (chartInstance.current) chartInstance.current.destroy();
-
-            const ctx = chartRef.current.getContext('2d');
-            if (ctx) {
-                let labels: string[] = [];
-                let scores: number[] = [];
-                let labelTitle = "";
-
-                if (results.type === 'curve') {
-                    labels = results.curve.map((f: any) => f.time.toFixed(1) + 's');
-                    scores = results.curve.map((f: any) => f.score);
-                    labelTitle = "Similarity Curve";
-                } else if (results.type === 'matrix' && selectedRow !== null) {
-                    const rowData = results.matrix.matrix[selectedRow];
-
-                    // If showing upper triangle, maybe mask the lower part in the chart too?
-                    // Usually the line chart shows the full row interaction.
-                    // Let's keep it as full row for now unless requested otherwise, 
-                    // as selecting a row usually implies wanting to see that row's data.
-                    // However, if we strictly want upper triangle, maybe we should null out earlier values?
-                    // The user said "Similarity Heatmap" toggle, implies visual only on heatmap.
-
-                    labels = results.matrix.cols_time.map((t: number) => t.toFixed(1) + 's');
-                    scores = rowData;
-                    labelTitle = `Similarity for Source A at ${results.matrix.rows_time[selectedRow].toFixed(1)}s`;
-                }
-
-                chartInstance.current = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: labelTitle,
-                            data: scores,
-                            borderColor: 'rgb(0, 0, 0)',
-                            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                            tension: 0.2,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: { legend: { display: true } },
-                        scales: {
-                            y: {
-                                min: 0,
-                                max: 1,
-                                beginAtZero: true,
-                                suggestedMin: 0,
-                                title: { display: true, text: 'Cosine Similarity' }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        return () => {
-            if (chartInstance.current) {
-                chartInstance.current.destroy();
-                chartInstance.current = null;
-            }
-        };
-    }, [results, selectedRow]);
 
 
     return (
@@ -328,7 +173,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
                                     <canvas
                                         ref={heatmapRef}
                                         onMouseMove={handleHeatmapMove}
-                                        onMouseLeave={() => setHoverInfo(null)}
+                                        onMouseLeave={handleHeatmapLeave}
                                         onClick={handleHeatmapClick}
                                         className="max-h-[600px] w-full object-contain"
                                     />

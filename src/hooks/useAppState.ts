@@ -87,3 +87,17 @@ export function useAppState() {
         videoFps, setVideoFps
     };
 }
+
+/**
+ * Helper function to check if sources are ready for calculation.
+ * Moved from MainContent.tsx for better separation of concerns.
+ */
+export function isSourceReady(state: AppState): boolean {
+    const { sourceAType, sourceBType, sourceAText, sourceBText, sourceAFile, sourceBFile } = state;
+    return (
+        (sourceAType !== 'Text' || sourceAText.length > 0) &&
+        (sourceBType !== 'Text' || sourceBText.length > 0) &&
+        (sourceAType !== 'Image' && sourceAType !== 'Video' || sourceAFile !== null) &&
+        (sourceBType !== 'Image' && sourceBType !== 'Video' || sourceBFile !== null)
+    );
+}

@@ -8,7 +8,8 @@ import io
 import tempfile
 import os
 from typing import Optional, List, Union, Tuple, Any
-from fastapi import UploadFile, HTTPException
+from fastapi import UploadFile
+from app.services.exceptions import SourceValidationError, VideoProcessingError, UnknownSourceTypeError
 import numpy as np
 import torch.distributions as dist
 from app.models.schemas import GenericAnalysisResponse, FrameResult, SimilarityMatrix
@@ -185,20 +186,20 @@ class VLMService:
         
         if source_type == "Text":
             if not text:
-                raise HTTPException(status_code=400, detail="Text required for Text source")
+                raise SourceValidationError("Text required for Text source")
             use_pooler = (text_embed_type == "pooler_output")
             embeds = VLMService.get_text_embedding(text, use_pooler_output=use_pooler, sigma=sigma)
         
         elif source_type == "Image":
             if not file:
-                raise HTTPException(status_code=400, detail="Image file required for Image source")
+                raise SourceValidationError("Image file required for Image source")
             content = await file.read()
             raw_image = Image.open(io.BytesIO(content)).convert("RGB")
             embeds = VLMService.get_image_embedding(raw_image, sigma=sigma)
         
         elif source_type == "Video":
             if not file:
-                raise HTTPException(status_code=400, detail="Video file required for Video source")
+                raise SourceValidationError("Video file required for Video source")
             is_video = True
             
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
@@ -209,7 +210,7 @@ class VLMService:
             
             frames, timestamps = extract_frames(tmp_path, fps=video_fps)
             if not frames:
-                raise HTTPException(status_code=400, detail="Could not extract frames from video")
+                raise VideoProcessingError("Could not extract frames from video")
             
             # Batch process frames
             all_embeds_list = []
@@ -232,7 +233,7 @@ class VLMService:
             embeds = VLMService.get_random_embedding(sigma=sigma)
         
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown source type: {source_type}")
+            raise UnknownSourceTypeError(f"Unknown source type: {source_type}")
             
         return embeds, timestamps, is_video, temp_files
 

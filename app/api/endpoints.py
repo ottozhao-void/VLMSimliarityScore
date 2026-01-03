@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional
 from app.models.schemas import LoadModelRequest, GenericAnalysisResponse
 from app.services.vlm_engine import VLMService
+from app.services.exceptions import SourceValidationError, VideoProcessingError, UnknownSourceTypeError
 from app.core.state import state
 import time
 import os
@@ -82,6 +83,10 @@ async def predict(
             time_taken_ms=duration_ms
         )
 
+    except SourceValidationError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except (VideoProcessingError, UnknownSourceTypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
