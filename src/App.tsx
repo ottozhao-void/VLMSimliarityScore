@@ -36,7 +36,8 @@ export default function App() {
             sigmaA,
             sigmaB,
             appState.textEmbedTypeA,
-            appState.textEmbedTypeB
+            appState.textEmbedTypeB,
+            appState.videoFps
         );
     };
 

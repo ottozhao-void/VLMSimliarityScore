@@ -16,7 +16,8 @@ export function usePrediction() {
         reparamSigmaA: number,
         reparamSigmaB: number,
         textEmbedTypeA: string,
-        textEmbedTypeB: string
+        textEmbedTypeB: string,
+        videoFps: number
     ) => {
         setCalculating(true);
         setError(null);
@@ -36,6 +37,7 @@ export function usePrediction() {
         formData.append('reparam_sigma_b', String(reparamSigmaB));
         formData.append('text_embed_type_a', textEmbedTypeA);
         formData.append('text_embed_type_b', textEmbedTypeB);
+        formData.append('video_fps', String(videoFps));
 
         try {
             const res = await fetch('/api/predict', {

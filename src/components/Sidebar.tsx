@@ -19,6 +19,7 @@ interface SidebarProps {
         setUseReparamB: (b: boolean) => void;
         setTextEmbedTypeA: (t: TextEmbedType) => void;
         setTextEmbedTypeB: (t: TextEmbedType) => void;
+        setVideoFps: (n: number) => void;
     };
     onLoadModel: () => void;
     modelStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -41,7 +42,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         useReparamA, setUseReparamA,
         useReparamB, setUseReparamB,
         textEmbedTypeA, setTextEmbedTypeA,
-        textEmbedTypeB, setTextEmbedTypeB
+        textEmbedTypeB, setTextEmbedTypeB,
+        videoFps, setVideoFps
     } = state;
 
     const fileInputARef = useRef<HTMLInputElement>(null);
@@ -389,6 +391,32 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             >
                                 <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGpu ? 'translate-x-4' : 'translate-x-0'}`} />
                             </button>
+                        </div>
+
+                        {/* Video Frame Rate Setting */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-gray-900">Video Frame Rate</span>
+                                    <span className="text-[10px] text-gray-400">Frames per second for sampling</span>
+                                </div>
+                                <div className="px-2 py-1 bg-gray-50 border border-gray-100 rounded-md font-mono text-xs font-medium text-black">
+                                    {videoFps} FPS
+                                </div>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="30"
+                                step="1"
+                                value={videoFps}
+                                onChange={(e) => setVideoFps(parseInt(e.target.value))}
+                                className="w-full h-1.5 bg-gray-100 rounded-full appearance-none cursor-pointer accent-black hover:accent-gray-800"
+                            />
+                            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                                <span>1 FPS</span>
+                                <span>30 FPS</span>
+                            </div>
                         </div>
                     </div>
                 )}

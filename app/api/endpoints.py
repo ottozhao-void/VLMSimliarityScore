@@ -32,7 +32,8 @@ async def predict(
     reparam_sigma_a: float = Form(0.0),
     reparam_sigma_b: float = Form(0.0),
     text_embed_type_a: str = Form("projected"),  # "projected" or "pooler_output"
-    text_embed_type_b: str = Form("projected")   # "projected" or "pooler_output"
+    text_embed_type_b: str = Form("projected"),   # "projected" or "pooler_output"
+    video_fps: int = Form(1)  # Frames per second for video sampling
 ):
     if not state.has_model():
         raise HTTPException(status_code=400, detail="Model not loaded")
@@ -71,7 +72,7 @@ async def predict(
                     tmp_path = tmp.name
                     temp_files.append(tmp_path)
                 
-                frames, timestamps = extract_frames(tmp_path, fps=1)
+                frames, timestamps = extract_frames(tmp_path, fps=video_fps)
                 if not frames:
                      raise HTTPException(status_code=400, detail="Could not extract frames from video")
                 

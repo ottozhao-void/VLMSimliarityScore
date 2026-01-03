@@ -25,6 +25,7 @@ export interface AppState {
     useReparamB: boolean;
     textEmbedTypeA: TextEmbedType;
     textEmbedTypeB: TextEmbedType;
+    videoFps: number;
 }
 
 export function useAppState() {
@@ -48,6 +49,7 @@ export function useAppState() {
     const [useReparamB, setUseReparamB] = useState<boolean>(false);
     const [textEmbedTypeA, setTextEmbedTypeA] = useState<TextEmbedType>('projected');
     const [textEmbedTypeB, setTextEmbedTypeB] = useState<TextEmbedType>('projected');
+    const [videoFps, setVideoFps] = useState<number>(1);
 
     // Wrapper setters that clear content when source type changes
     const setSourceAType = (newType: SourceType) => {
@@ -81,6 +83,7 @@ export function useAppState() {
         useReparamA, setUseReparamA,
         useReparamB, setUseReparamB,
         textEmbedTypeA, setTextEmbedTypeA,
-        textEmbedTypeB, setTextEmbedTypeB
+        textEmbedTypeB, setTextEmbedTypeB,
+        videoFps, setVideoFps
     };
 }
