@@ -21,6 +21,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
 
     const [hoverInfo, setHoverInfo] = useState<{ r: number, c: number, val: number } | null>(null);
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [showUpperTriangle, setShowUpperTriangle] = useState(false);
 
     const isReady = (
         (sourceAType !== 'Text' || sourceAText.length > 0) &&
@@ -44,11 +45,19 @@ export default function MainContent({ state, onCalculate, calculating, results }
                 const width = canvas.width = canvas.parentElement?.clientWidth || 600;
                 const height = canvas.height = Math.min(600, width * (rows / cols)); // Aspect ratio
 
+                // Clear canvas before redrawing (important for toggle)
+                ctx.clearRect(0, 0, width, height);
+
                 const cellW = width / cols;
                 const cellH = height / rows;
 
                 for (let i = 0; i < rows; i++) {
                     for (let j = 0; j < cols; j++) {
+                        // Upper Triangle Toggle:
+                        // Upper triangle means col index >= row index (j >= i)
+                        // So if we only want upper triangle, we skip if i > j
+                        if (showUpperTriangle && i > j) continue;
+
                         const val = matrix[i][j]; // -1 to 1
                         // Map -1..1 to hue. 
                         // Simple: Red (val=1) to Blue (val=-1)?
@@ -75,7 +84,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
                 }
             }
         }
-    }, [results, selectedRow]);
+    }, [results, selectedRow, showUpperTriangle]);
 
     // Handle Matrix Interaction
     const handleHeatmapMove = (e: React.MouseEvent) => {
@@ -95,6 +104,11 @@ export default function MainContent({ state, onCalculate, calculating, results }
         const r = Math.floor(y / cellH);
 
         if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            // If upper triangle only, ignore hover on lower triangle
+            if (showUpperTriangle && r > c) {
+                setHoverInfo(null);
+                return;
+            }
             setHoverInfo({ r, c, val: matrix[r][c] });
         } else {
             setHoverInfo(null);
@@ -127,6 +141,14 @@ export default function MainContent({ state, onCalculate, calculating, results }
                     labelTitle = "Similarity Curve";
                 } else if (results.type === 'matrix' && selectedRow !== null) {
                     const rowData = results.matrix.matrix[selectedRow];
+
+                    // If showing upper triangle, maybe mask the lower part in the chart too?
+                    // Usually the line chart shows the full row interaction.
+                    // Let's keep it as full row for now unless requested otherwise, 
+                    // as selecting a row usually implies wanting to see that row's data.
+                    // However, if we strictly want upper triangle, maybe we should null out earlier values?
+                    // The user said "Similarity Heatmap" toggle, implies visual only on heatmap.
+
                     labels = results.matrix.cols_time.map((t: number) => t.toFixed(1) + 's');
                     scores = rowData;
                     labelTitle = `Similarity for Source A at ${results.matrix.rows_time[selectedRow].toFixed(1)}s`;
@@ -269,6 +291,29 @@ export default function MainContent({ state, onCalculate, calculating, results }
                                     <div className="flex items-center gap-2">
                                         <Grid size={20} className="text-gray-500" />
                                         <span className="text-sm font-bold uppercase text-gray-700">Similarity Heatmap</span>
+
+                                        {/* Toggle Button for Upper Triangle */}
+                                        <div className="flex items-center ml-4 gap-2">
+                                            <button
+                                                onClick={() => setShowUpperTriangle(!showUpperTriangle)}
+                                                className={`
+                                                    relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent 
+                                                    transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2
+                                                    ${showUpperTriangle ? 'bg-black' : 'bg-gray-200'}
+                                                `}
+                                            >
+                                                <span
+                                                    className={`
+                                                        pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 
+                                                        transition duration-200 ease-in-out
+                                                        ${showUpperTriangle ? 'translate-x-4' : 'translate-x-0'}
+                                                    `}
+                                                />
+                                            </button>
+                                            <span className="text-xs text-gray-500 cursor-pointer select-none" onClick={() => setShowUpperTriangle(!showUpperTriangle)}>
+                                                Upper Triangle
+                                            </span>
+                                        </div>
                                     </div>
                                     {hoverInfo && (
                                         <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded fade-in">

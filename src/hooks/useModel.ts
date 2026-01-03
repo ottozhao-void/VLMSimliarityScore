@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export function useModel() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -24,10 +25,12 @@ export function useModel() {
 
             setStatus('ready');
             setMessage('Model loaded successfully');
+            toast.success('Model loaded successfully');
         } catch (err: any) {
             console.error(err);
             setStatus('error');
             setMessage(err.message || String(err));
+            toast.error(err.message || String(err));
         }
     };
 

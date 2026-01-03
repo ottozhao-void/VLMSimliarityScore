@@ -1,5 +1,6 @@
 
 import { useEffect } from 'react';
+import { Toaster } from 'sonner';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import { useAppState } from './hooks/useAppState';
@@ -41,6 +42,7 @@ export default function App() {
 
     return (
         <div className="grid grid-cols-12 h-screen overflow-hidden bg-white text-gray-900 font-sans">
+            <Toaster position="top-center" richColors />
             <Sidebar
                 state={appState}
                 onLoadModel={handleLoadModel}
