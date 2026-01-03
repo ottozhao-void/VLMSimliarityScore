@@ -1,11 +1,17 @@
 from app.core.state import state
+from app.services.video_processing import extract_frames
 from transformers import AutoProcessor, AutoModel
 import torch
 from PIL import Image
 import math
-from typing import Optional, List, Union, Tuple
+import io
+import tempfile
+import os
+from typing import Optional, List, Union, Tuple, Any
+from fastapi import UploadFile, HTTPException
 import numpy as np
 import torch.distributions as dist
+from app.models.schemas import GenericAnalysisResponse, FrameResult, SimilarityMatrix
 
 class VLMService:
     @staticmethod
@@ -146,3 +152,155 @@ class VLMService:
         # [N, D] @ [M, D].T -> [N, M]
         sim_matrix = (embeds_a @ embeds_b.T).cpu().numpy()
         return sim_matrix
+
+    @staticmethod
+    async def process_source(
+        source_type: str,
+        text: Optional[str],
+        file: Optional[UploadFile],
+        sigma: float,
+        text_embed_type: str,
+        video_fps: int,
+        batch_size: int = 4
+    ) -> Tuple[torch.Tensor, Optional[List[float]], bool, List[str]]:
+        """
+        Process any source type and return embeddings.
+        
+        Args:
+            source_type: One of "Text", "Image", "Video", "Random"
+            text: Text content (for Text source)
+            file: Uploaded file (for Image/Video source)
+            sigma: Reparameterization sigma
+            text_embed_type: "projected" or "pooler_output"
+            video_fps: Frames per second for video sampling
+            batch_size: Batch size for video frame processing
+            
+        Returns:
+            Tuple of (embeddings, timestamps, is_video, temp_files_to_cleanup)
+        """
+        embeds = None
+        timestamps = None
+        is_video = False
+        temp_files = []
+        
+        if source_type == "Text":
+            if not text:
+                raise HTTPException(status_code=400, detail="Text required for Text source")
+            use_pooler = (text_embed_type == "pooler_output")
+            embeds = VLMService.get_text_embedding(text, use_pooler_output=use_pooler, sigma=sigma)
+        
+        elif source_type == "Image":
+            if not file:
+                raise HTTPException(status_code=400, detail="Image file required for Image source")
+            content = await file.read()
+            raw_image = Image.open(io.BytesIO(content)).convert("RGB")
+            embeds = VLMService.get_image_embedding(raw_image, sigma=sigma)
+        
+        elif source_type == "Video":
+            if not file:
+                raise HTTPException(status_code=400, detail="Video file required for Video source")
+            is_video = True
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+                content = await file.read()
+                tmp.write(content)
+                tmp_path = tmp.name
+                temp_files.append(tmp_path)
+            
+            frames, timestamps = extract_frames(tmp_path, fps=video_fps)
+            if not frames:
+                raise HTTPException(status_code=400, detail="Could not extract frames from video")
+            
+            # Batch process frames
+            all_embeds_list = []
+            for i in range(0, len(frames), batch_size):
+                batch = frames[i:i+batch_size]
+                batch_emb = VLMService.get_batch_image_embeddings(batch, sigma=sigma)
+                all_embeds_list.append(batch_emb)
+            
+            if all_embeds_list:
+                embeds = torch.cat(all_embeds_list, dim=0)
+            else:
+                # Fallback: infer embedding dimension from model config
+                dim = 512
+                if state.has_model() and hasattr(state.model, "config"):
+                    if hasattr(state.model.config, "projection_dim"):
+                        dim = state.model.config.projection_dim
+                embeds = torch.empty(0, dim).to(state.device)
+
+        elif source_type == "Random":
+            embeds = VLMService.get_random_embedding(sigma=sigma)
+        
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown source type: {source_type}")
+            
+        return embeds, timestamps, is_video, temp_files
+
+    @staticmethod
+    def compute_generic_similarity(
+        embeds_a: torch.Tensor,
+        embeds_b: torch.Tensor,
+        timestamps_a: Optional[List[float]],
+        timestamps_b: Optional[List[float]],
+        is_video_a: bool,
+        is_video_b: bool
+    ) -> Tuple[str, Optional[float], Optional[List[FrameResult]], Optional[SimilarityMatrix], Optional[FrameResult], Optional[float]]:
+        """
+        Dispatches to scalar/curve/matrix based on input types.
+        
+        Returns:
+            Tuple of (res_type, score, curve, matrix, best_frame, avg_score)
+        """
+        res_type = "scalar"
+        score = None
+        curve = None
+        matrix = None
+        best_frame = None
+        avg_score = None
+        
+        # Case 1: Video vs Video -> Matrix
+        if is_video_a and is_video_b:
+            res_type = "matrix"
+            sim_mat = VLMService.compute_similarity_matrix(embeds_a, embeds_b)
+            matrix = SimilarityMatrix(
+                matrix=sim_mat.tolist(),
+                rows_time=timestamps_a,
+                cols_time=timestamps_b
+            )
+            avg_score = float(sim_mat.mean())
+            
+        # Case 2: Video vs Static -> Curve over Video
+        elif is_video_a and not is_video_b:
+            res_type = "curve"
+            # [Na, D] @ [1, D].T -> [Na, 1]
+            sims = (embeds_a @ embeds_b.T).squeeze(1).cpu().numpy()
+            
+            curve_results = []
+            for i, s in enumerate(sims):
+                curve_results.append(FrameResult(time=timestamps_a[i], score=max(-1.0, min(1.0, float(s)))))
+            
+            curve = curve_results
+            best_frame = max(curve, key=lambda x: x.score) if curve else None
+            avg_score = sum(r.score for r in curve) / len(curve) if curve else 0.0
+
+        # Case 3: Static vs Video -> Curve over Video
+        elif not is_video_a and is_video_b:
+            res_type = "curve"
+            # [1, D] @ [Nb, D].T -> [1, Nb]
+            sims = (embeds_a @ embeds_b.T).squeeze(0).cpu().numpy()
+            
+            curve_results = []
+            for i, s in enumerate(sims):
+                curve_results.append(FrameResult(time=timestamps_b[i], score=max(-1.0, min(1.0, float(s)))))
+            
+            curve = curve_results
+            best_frame = max(curve, key=lambda x: x.score) if curve else None
+            avg_score = sum(r.score for r in curve) / len(curve) if curve else 0.0
+            
+        # Case 4: Static vs Static -> Scalar
+        else:
+            res_type = "scalar"
+            s, _ = VLMService.compute_similarity(embeds_a, embeds_b)
+            score = s
+            
+        return res_type, score, curve, matrix, best_frame, avg_score
