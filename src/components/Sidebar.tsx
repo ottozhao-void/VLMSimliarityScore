@@ -92,13 +92,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                 }}
                 onDrop={(e) => handleFileDrop(e, setType, setFileVal)}
             >
-                {/* Drag Overlay Feedback */}
-                <div className="absolute inset-0 bg-black/5 border-2 border-black/10 z-50 rounded-xl hidden group-hover/section:flex pointer-events-none items-center justify-center backdrop-blur-[1px]">
-                    <div className="bg-white px-4 py-2 rounded-full shadow-sm text-xs font-semibold text-gray-700 flex items-center gap-2">
-                        <UploadCloud size={14} />
-                        <span>Drop to replace</span>
-                    </div>
-                </div>
+
 
                 <div className="flex items-center justify-between mb-3 relative z-10">
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{label}</span>
