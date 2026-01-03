@@ -14,5 +14,5 @@ description: Deploy to remote server (Commit, Push, Pull & Build)
 // turbo
 5. Run the deployment command on the remote server:
    ```bash
-   ssh zhaofanghan@10.184.17.30 "bash -i -c 'cd /data1/zhaofanghan/VLMSimliarityScore && git pull && npm run build'"
+   ssh zhaofanghan@10.184.17.30 "bash -i -c 'cd /data1/zhaofanghan/VLMSimliarityScore && git pull && npm install && npm run build'"
    ```
