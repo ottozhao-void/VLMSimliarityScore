@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { Play, BarChart3, Clock, Image as ImageIcon, Activity } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Play, BarChart3, Clock, Grid, Image as ImageIcon, Video as VideoIcon, Activity, MousePointer2 } from 'lucide-react';
 import Chart from 'chart.js/auto';
+import { AppState } from '../hooks/useAppState';
 
 interface MainContentProps {
-    state: any;
+    state: AppState;
     onCalculate: () => void;
     calculating: boolean;
     results: any;
@@ -11,71 +12,146 @@ interface MainContentProps {
 
 export default function MainContent({ state, onCalculate, calculating, results }: MainContentProps) {
     const {
-        imageSource, textSource, textInput, selectedImage, selectedVideo
+        sourceAType, sourceBType, sourceAText, sourceBText, sourceAFile, sourceBFile,
     } = state;
 
     const chartRef = useRef<HTMLCanvasElement>(null);
+    const heatmapRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<Chart | null>(null);
 
+    const [hoverInfo, setHoverInfo] = useState<{ r: number, c: number, val: number } | null>(null);
+    const [selectedRow, setSelectedRow] = useState<number | null>(null);
+
     const isReady = (
-        (textSource === 'Random' || textInput.length > 0) &&
-        (
-            (imageSource === 'Image' && selectedImage) ||
-            (imageSource === 'Video' && selectedVideo) ||
-            imageSource === 'Random'
-        )
+        (sourceAType !== 'Text' || sourceAText.length > 0) &&
+        (sourceBType !== 'Text' || sourceBText.length > 0) &&
+        (sourceAType !== 'Image' && sourceAType !== 'Video' || sourceAFile) &&
+        (sourceBType !== 'Image' && sourceBType !== 'Video' || sourceBFile)
     );
 
+    // Render Heatmap
     useEffect(() => {
-        if (results && results.type === 'video' && chartRef.current) {
-            if (chartInstance.current) {
-                chartInstance.current.destroy();
+        if (results && results.type === 'matrix' && heatmapRef.current && results.matrix) {
+            const canvas = heatmapRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                const matrix = results.matrix.matrix; // [Rows, Cols]
+                const rows = matrix.length;
+                const cols = matrix[0].length;
+
+                // Canvas logic: fixed size or responsive? 
+                // Let's use computed width
+                const width = canvas.width = canvas.parentElement?.clientWidth || 600;
+                const height = canvas.height = Math.min(600, width * (rows / cols)); // Aspect ratio
+
+                const cellW = width / cols;
+                const cellH = height / rows;
+
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        const val = matrix[i][j]; // -1 to 1
+                        // Map -1..1 to hue. 
+                        // Simple: Red (val=1) to Blue (val=-1)?
+                        // Let's try "Thermal": Black/Purple -> Red -> Yellow -> White
+                        // Simply: use Red channel opacity or lightness
+
+                        // Robust Color Map (Blue -> Red)
+                        // val is -1 to 1. Clamped 0 to 1 for simple mapping if negative is rare?
+                        // But cosine can be negative.
+                        // Map [-1, 1] -> [0, 1] relative
+                        const norm = (val + 1) / 2;
+                        // Hue: 240 (Blue) -> 0 (Red)
+                        const hue = (1 - norm) * 240;
+                        ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
+                        ctx.fillRect(j * cellW, i * cellH, cellW, cellH);
+                    }
+                }
+
+                if (selectedRow !== null) {
+                    // Highlight row
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(0, selectedRow * cellH, width, cellH);
+                }
             }
+        }
+    }, [results, selectedRow]);
+
+    // Handle Matrix Interaction
+    const handleHeatmapMove = (e: React.MouseEvent) => {
+        if (!results || results.type !== 'matrix' || !heatmapRef.current) return;
+        const rect = heatmapRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const matrix = results.matrix.matrix;
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+
+        const cellW = rect.width / cols;
+        const cellH = rect.height / rows;
+
+        const c = Math.floor(x / cellW);
+        const r = Math.floor(y / cellH);
+
+        if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            setHoverInfo({ r, c, val: matrix[r][c] });
+        } else {
+            setHoverInfo(null);
+        }
+    };
+
+    const handleHeatmapClick = () => {
+        if (hoverInfo) {
+            setSelectedRow(hoverInfo.r);
+        }
+    };
+
+    // Render Line Chart (Curve or specific row from Matrix)
+    useEffect(() => {
+        // Condition: Type is Curve OR (Type is Matrix AND selectedRow is valid)
+        const showChart = (results?.type === 'curve') || (results?.type === 'matrix' && selectedRow !== null);
+
+        if (showChart && chartRef.current) {
+            if (chartInstance.current) chartInstance.current.destroy();
 
             const ctx = chartRef.current.getContext('2d');
             if (ctx) {
-                const labels = results.frames.map((f: any) => f.time.toFixed(1) + 's');
-                const scores = results.frames.map((f: any) => f.score);
+                let labels: string[] = [];
+                let scores: number[] = [];
+                let labelTitle = "";
+
+                if (results.type === 'curve') {
+                    labels = results.curve.map((f: any) => f.time.toFixed(1) + 's');
+                    scores = results.curve.map((f: any) => f.score);
+                    labelTitle = "Similarity Curve";
+                } else if (results.type === 'matrix' && selectedRow !== null) {
+                    const rowData = results.matrix.matrix[selectedRow];
+                    labels = results.matrix.cols_time.map((t: number) => t.toFixed(1) + 's');
+                    scores = rowData;
+                    labelTitle = `Similarity for Source A at ${results.matrix.rows_time[selectedRow].toFixed(1)}s`;
+                }
 
                 chartInstance.current = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Similarity Score',
+                            label: labelTitle,
                             data: scores,
                             borderColor: 'rgb(0, 0, 0)',
                             backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 2,
-                            pointHoverRadius: 6
+                            tension: 0.2,
+                            fill: true
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        const val = context.parsed.y;
-                                        return val !== null ? `Score: ${val.toFixed(4)}` : '';
-                                    }
-                                }
-                            }
-                        },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { display: true } },
                         scales: {
-                            y: {
-                                beginAtZero: false,
-                                suggestedMin: -0.1,
-                                suggestedMax: 1.0,
-                                title: { display: true, text: 'Similarity' }
-                            },
-                            x: {
-                                title: { display: true, text: 'Time (s)' }
-                            }
+                            y: { min: -1, max: 1, title: { display: true, text: 'Cosine Similarity' } }
                         }
                     }
                 });
@@ -88,24 +164,25 @@ export default function MainContent({ state, onCalculate, calculating, results }
                 chartInstance.current = null;
             }
         };
-    }, [results]);
+    }, [results, selectedRow]);
+
 
     return (
-        <div className="col-span-12 md:col-span-8 lg:col-span-9 h-full relative overflow-y-auto bg-white">
-            <div className="max-w-4xl mx-auto w-full p-8 space-y-8">
+        <div className="col-span-12 md:col-span-8 lg:col-span-9 h-full relative overflow-y-auto bg-white scroll-smooth">
+            <div className="max-w-5xl mx-auto w-full p-8 space-y-8">
 
                 {/* Header */}
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900">Similarity Analysis</h2>
-                    <p className="text-gray-500 mt-1">Upload an image and provide a text prompt to measure semantic alignment.</p>
+                    <p className="text-gray-500 mt-1">Configure sources on the left and run analysis.</p>
                 </div>
 
                 {/* Calculate Button */}
-                <div className="flex items-center justify-end pt-6 border-t border-gray-100">
+                <div className="flex items-center justify-end pt-4 border-t border-gray-100">
                     <button
                         onClick={onCalculate}
                         disabled={!isReady || calculating}
-                        className={`flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg ${isReady && !calculating
+                        className={`flex items-center gap-2 px-8 py-3 rounded-full font-bold text-lg transition-all shadow-lg ${isReady && !calculating
                             ? 'bg-black text-white hover:bg-gray-800 hover:shadow-xl active:scale-95'
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
@@ -118,76 +195,115 @@ export default function MainContent({ state, onCalculate, calculating, results }
                         ) : (
                             <>
                                 <Play size={20} fill="currentColor" />
-                                <span>Calculate Similarity</span>
+                                <span>Calculate</span>
                             </>
                         )}
                     </button>
                 </div>
 
-                {/* Results */}
+                {/* Results Section */}
                 {results && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
-                            <div className="flex items-center gap-2 mb-6 text-gray-500">
-                                <BarChart3 size={20} />
-                                <span className="text-sm font-medium uppercase tracking-wider">Analysis Results</span>
-                            </div>
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-                                    <span className="text-sm text-gray-500 font-medium mb-2">
-                                        {results.type === 'video' ? 'Average Similarity Score' : 'Semantic Similarity Score'}
-                                    </span>
-                                    <div className="text-6xl font-black text-gray-900 tracking-tight">
-                                        {(results.type === 'video' ? results.average_score : results.score).toFixed(4)}
-                                    </div>
-                                    <div className="mt-4 pt-4 border-t border-gray-200 w-full flex flex-col items-center">
-                                        {results.type !== 'video' ? (
-                                            <>
-                                                <span className="text-xs text-gray-400 font-medium mb-1">Vector Angle</span>
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-2xl font-bold text-gray-700">{results.angle?.toFixed(2) || '0.0'}</span>
-                                                    <span className="text-sm text-gray-400">deg</span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <span className="text-xs text-gray-400">Video Analysis</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col justify-center gap-4">
-                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <Clock size={18} className="text-gray-400" />
-                                            <span className="text-sm font-medium text-gray-700">Inference Time</span>
-                                        </div>
-                                        <span className="text-lg font-bold text-gray-900">{results.time.toFixed(0)} ms</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <ImageIcon size={18} className="text-gray-400" />
-                                            <span className="text-sm font-medium text-gray-700">Type</span>
-                                        </div>
-                                        <span className="text-sm font-bold text-gray-900">{results.type === 'video' ? 'Video' : 'Image'}</span>
-                                    </div>
+                        {/* Metrics Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Score Card */}
+                            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex flex-col items-center justify-center text-center">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                                    {results.type === 'scalar' ? 'Similarity Score' : 'Average Score'}
+                                </span>
+                                <div className="text-5xl font-black text-gray-900 tabular-nums tracking-tighter">
+                                    {(results.score ?? results.average_score ?? 0).toFixed(4)}
                                 </div>
                             </div>
 
-                            {/* Chart for Video */}
-                            {results.type === 'video' && (
-                                <div className="mt-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                                    <div className="flex items-center gap-2 mb-4 text-gray-500">
-                                        <Activity size={20} />
-                                        <span className="text-sm font-medium uppercase tracking-wider">Similarity Timeline</span>
+                            {/* Info Card */}
+                            <div className="bg-white rounded-2xl p-6 border border-gray-200 flex flex-col justify-center space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-gray-500">
+                                        <Clock size={16} />
+                                        <span className="text-sm font-medium">Time</span>
                                     </div>
-                                    <div className="relative h-64 w-full">
-                                        <canvas ref={chartRef}></canvas>
+                                    <span className="text-lg font-bold text-gray-900">{results.time_taken_ms.toFixed(0)} ms</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-gray-500">
+                                        <Activity size={16} />
+                                        <span className="text-sm font-medium">Type</span>
                                     </div>
+                                    <span className="text-sm font-bold bg-black text-white px-2 py-0.5 rounded uppercase text-[10px]">{results.type}</span>
+                                </div>
+                            </div>
+
+                            {/* Best Frame (if curve/matrix) */}
+                            {(results.best_frame || results.type === 'matrix') && (
+                                <div className="bg-white rounded-2xl p-6 border border-gray-200 flex flex-col justify-center">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Analysis</span>
+                                    {results.best_frame && (
+                                        <div className="mt-1">
+                                            <p className="text-sm text-gray-600">Best match at <span className="font-bold text-black">{results.best_frame.time.toFixed(1)}s</span></p>
+                                            <p className="text-xs text-green-600 font-medium pt-1">Score: {results.best_frame.score.toFixed(4)}</p>
+                                        </div>
+                                    )}
+                                    {results.type === 'matrix' && (
+                                        <div className="mt-2 text-xs text-gray-500">
+                                            Video-to-Video alignment computed.
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
+
+                        {/* Visualizations */}
+
+                        {/* Matrix Heatmap */}
+                        {results.type === 'matrix' && (
+                            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm overflow-hidden">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Grid size={20} className="text-gray-500" />
+                                        <span className="text-sm font-bold uppercase text-gray-700">Similarity Heatmap</span>
+                                    </div>
+                                    {hoverInfo && (
+                                        <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded fade-in">
+                                            T(A): {results.matrix.rows_time[hoverInfo.r].toFixed(1)}s,
+                                            T(B): {results.matrix.cols_time[hoverInfo.c].toFixed(1)}s
+                                            = <span className="font-bold">{hoverInfo.val.toFixed(3)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="relative w-full flex justify-center bg-gray-50 rounded border border-gray-100 cursor-crosshair">
+                                    <canvas
+                                        ref={heatmapRef}
+                                        onMouseMove={handleHeatmapMove}
+                                        onMouseLeave={() => setHoverInfo(null)}
+                                        onClick={handleHeatmapClick}
+                                        className="max-h-[600px] w-full object-contain"
+                                    />
+                                </div>
+                                <p className="text-xs text-center text-gray-400 mt-2">
+                                    <MousePointer2 size={12} className="inline mr-1" />
+                                    Click a row to view similarity curve for that Source A frame.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Line Chart */}
+                        {(results.type === 'curve' || (results.type === 'matrix' && selectedRow !== null)) && (
+                            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                                <div className="flex items-center gap-2 mb-4 text-gray-500">
+                                    <BarChart3 size={20} />
+                                    <span className="text-sm font-bold uppercase text-gray-700">
+                                        {results.type === 'curve' ? 'Similarity Curve' : 'Frame Similarity Detail'}
+                                    </span>
+                                </div>
+                                <div className="relative h-64 w-full">
+                                    <canvas ref={chartRef}></canvas>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 )}
             </div>

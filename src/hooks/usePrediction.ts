@@ -6,22 +6,31 @@ export function usePrediction() {
     const [error, setError] = useState<string | null>(null);
 
     const predict = async (
-        imageSource: string,
-        textSource: string,
-        text: string,
-        image: File | null,
-        video: File | null
+        sourceAType: string,
+        sourceBType: string,
+        sourceAText: string,
+        sourceBText: string,
+        sourceAFile: File | null,
+        sourceBFile: File | null,
+        reparamSigma: number,
+        textEmbedType: string
     ) => {
         setCalculating(true);
         setError(null);
         setResults(null);
 
         const formData = new FormData();
-        formData.append('image_source', imageSource);
-        formData.append('text_source', textSource);
-        if (text) formData.append('text', text);
-        if (imageSource === 'Image' && image) formData.append('image', image);
-        if (imageSource === 'Video' && video) formData.append('video', video);
+        formData.append('source_a_type', sourceAType);
+        formData.append('source_b_type', sourceBType);
+
+        if (sourceAText) formData.append('source_a_text', sourceAText);
+        if (sourceBText) formData.append('source_b_text', sourceBText);
+
+        if (sourceAFile) formData.append('source_a_file', sourceAFile);
+        if (sourceBFile) formData.append('source_b_file', sourceBFile);
+
+        formData.append('reparam_sigma', String(reparamSigma));
+        formData.append('text_embed_type', textEmbedType);
 
         try {
             const res = await fetch('/api/predict', {

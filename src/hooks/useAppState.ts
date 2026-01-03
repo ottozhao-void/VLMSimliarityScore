@@ -1,43 +1,57 @@
 import { useState } from 'react';
 
-export type ImageSource = 'Image' | 'Video' | 'Random';
-export type TextSource = 'Text' | 'Random';
+export type SourceType = 'Image' | 'Video' | 'Text' | 'Random';
 export type Tab = 'source' | 'general';
+export type TextEmbedType = 'projected' | 'pooler_output';
 
 export interface AppState {
     tab: Tab;
-    imageSource: ImageSource;
-    textSource: TextSource;
+    sourceAType: SourceType;
+    sourceBType: SourceType;
+    sourceAText: string;
+    sourceBText: string;
+    sourceAFile: File | null;
+    sourceBFile: File | null;
+
+    // Model & Settings
     modelPreset: string;
     customModelId: string;
     useGpu: boolean;
-    selectedImage: File | null;
-    selectedVideo: File | null;
-    textInput: string;
+    reparamSigma: number;
+    textEmbedType: TextEmbedType;
 }
 
 export function useAppState() {
     const [tab, setTab] = useState<Tab>('source');
-    const [imageSource, setImageSource] = useState<ImageSource>('Image');
-    const [textSource, setTextSource] = useState<TextSource>('Text');
+
+    const [sourceAType, setSourceAType] = useState<SourceType>('Video'); // Default A
+    const [sourceBType, setSourceBType] = useState<SourceType>('Text');  // Default B
+
+    const [sourceAText, setSourceAText] = useState<string>('');
+    const [sourceBText, setSourceBText] = useState<string>('');
+
+    const [sourceAFile, setSourceAFile] = useState<File | null>(null);
+    const [sourceBFile, setSourceBFile] = useState<File | null>(null);
+
     const [modelPreset, setModelPreset] = useState<string>('openai/clip-vit-large-patch14');
     const [customModelId, setCustomModelId] = useState<string>('');
     const [useGpu, setUseGpu] = useState<boolean>(true);
-    const [selectedImage, setSelectedImage] = useState<File | null>(null);
-    const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
-    const [textInput, setTextInput] = useState<string>('');
 
-    // Derived or specific setters can be added here if needed
+    const [reparamSigma, setReparamSigma] = useState<number>(0.0);
+    const [textEmbedType, setTextEmbedType] = useState<TextEmbedType>('projected');
 
     return {
         tab, setTab,
-        imageSource, setImageSource,
-        textSource, setTextSource,
+        sourceAType, setSourceAType,
+        sourceBType, setSourceBType,
+        sourceAText, setSourceAText,
+        sourceBText, setSourceBText,
+        sourceAFile, setSourceAFile,
+        sourceBFile, setSourceBFile,
         modelPreset, setModelPreset,
         customModelId, setCustomModelId,
         useGpu, setUseGpu,
-        selectedImage, setSelectedImage,
-        selectedVideo, setSelectedVideo,
-        textInput, setTextInput
+        reparamSigma, setReparamSigma,
+        textEmbedType, setTextEmbedType
     };
 }

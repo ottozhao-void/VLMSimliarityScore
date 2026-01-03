@@ -1,9 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional
-from app.models.schemas import LoadModelRequest, ImagePredictionResponse, VideoAnalysisResponse, FrameResult, ErrorResponse
+from app.models.schemas import LoadModelRequest, GenericAnalysisResponse, FrameResult, SimilarityMatrix, ErrorResponse
 from app.services.vlm_engine import VLMService
 from app.services.video_processing import extract_frames
 from app.core.state import state
+import torch
 import time
 import io
 import tempfile
@@ -20,127 +21,172 @@ async def load_model(request: LoadModelRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/predict", response_model=None) # We return distinct types, so response_model Union is tricky or just dict
+@router.post("/predict", response_model=GenericAnalysisResponse)
 async def predict(
-    image_source: str = Form("Image"),
-    text_source: str = Form("Text"),
-    text: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None),
-    video: Optional[UploadFile] = File(None)
+    source_a_type: str = Form(...),
+    source_b_type: str = Form(...),
+    source_a_text: Optional[str] = Form(None),
+    source_b_text: Optional[str] = Form(None),
+    source_a_file: Optional[UploadFile] = File(None),
+    source_b_file: Optional[UploadFile] = File(None),
+    reparam_sigma: float = Form(0.0),
+    text_embed_type: str = Form("projected") # "projected" or "pooler"
 ):
     if not state.has_model():
         raise HTTPException(status_code=400, detail="Model not loaded")
 
     start_time = time.time()
+    temp_files = []
     
     try:
-        text_embeds = None
-        image_embeds = None
-        
-        # 1. Process Video if needed
-        if image_source == "Video":
-            if not video:
-                 raise HTTPException(status_code=400, detail="Video file required for Video source")
-                 
-            # Save temp file
-            # Ideally use a service for temp file management if possible, but keep it simple
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-                content = await video.read()
-                tmp.write(content)
-                tmp_path = tmp.name
+        # Helper to get embeddings
+        async def get_embeddings(source_type: str, text_val: Optional[str], file_val: Optional[UploadFile]):
+            embeds = None
+            timestamps = None
+            is_video = False
+            
+            if source_type == "Text":
+                if not text_val:
+                    raise HTTPException(status_code=400, detail="Text required for Text source")
+                use_pooler = (text_embed_type == "pooler_output")
+                embeds = VLMService.get_text_embedding(text_val, use_pooler_output=use_pooler, sigma=reparam_sigma)
+            
+            elif source_type == "Image":
+                if not file_val:
+                     raise HTTPException(status_code=400, detail="Image file required for Image source")
+                content = await file_val.read()
+                raw_image = Image.open(io.BytesIO(content)).convert("RGB")
+                embeds = VLMService.get_image_embedding(raw_image, sigma=reparam_sigma)
+            
+            elif source_type == "Video":
+                if not file_val:
+                     raise HTTPException(status_code=400, detail="Video file required for Video source")
+                is_video = True
                 
-            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+                    content = await file_val.read()
+                    tmp.write(content)
+                    tmp_path = tmp.name
+                    temp_files.append(tmp_path)
+                
                 frames, timestamps = extract_frames(tmp_path, fps=1)
-                
                 if not frames:
                      raise HTTPException(status_code=400, detail="Could not extract frames from video")
-
-                # Prepare Text Embed
-                if text_source == "Text" and text:
-                     text_embeds = VLMService.get_text_embedding(text)
-                elif text_source == "Random":
-                     text_embeds = VLMService.get_random_embedding()
-                else:
-                     raise HTTPException(status_code=400, detail="Valid text source required")
                 
-                # Batch Process Frames
-                video_results = []
+                # Batch process
+                # We need all embs to compute matrix or curve
+                # For large videos, we might OOM if we keep all on GPU? 
+                # VLMService.get_batch... returns tensor on device.
+                # Let's keep distinct batches or stack them?
+                # For sim matrix, we need full tensors. N*D.
+                
+                # Batch logic inside helper:
                 batch_size = 4
-                
+                all_embeds_list = []
                 for i in range(0, len(frames), batch_size):
-                    batch_frames = frames[i:i+batch_size]
-                    batch_embeds = VLMService.get_batch_image_embeddings(batch_frames)
-                    
-                    # Sim: [1, D] @ [B, D].T -> [1, B]
-                    sims = (text_embeds @ batch_embeds.T).squeeze(0).cpu().numpy()
-                    
-                    if len(batch_frames) == 1:
-                        # squeeze might return scalar if B=1? No, squeeze(0) on [1, 1] -> [1]
-                        # Wait, torch behavior
-                        # [1, D] @ [1, D].T -> [1, 1]. squeeze(0) -> [1].
-                        if sims.ndim == 0:
-                            sims = [float(sims)]
-                        else:
-                            sims = [float(sims)]
-                    else:
-                        sims = [float(s) for s in sims]
-                        
-                    for j, s in enumerate(sims):
-                        idx = i + j
-                        if idx < len(timestamps):
-                            video_results.append(FrameResult(time=timestamps[idx], score=max(-1.0, min(1.0, s))))
-
-                end_time = time.time()
-                duration_ms = (end_time - start_time) * 1000
+                    batch = frames[i:i+batch_size]
+                    batch_emb = VLMService.get_batch_image_embeddings(batch, sigma=reparam_sigma)
+                    all_embeds_list.append(batch_emb)
                 
-                best_frame = max(video_results, key=lambda x: x.score) if video_results else None
-                avg_score = sum(r.score for r in video_results) / len(video_results) if video_results else 0.0
-                
-                return VideoAnalysisResponse(
-                    frames=video_results,
-                    average_score=avg_score,
-                    best_frame=best_frame,
-                    time=duration_ms
-                )
+                if all_embeds_list:
+                    embeds = torch.cat(all_embeds_list, dim=0)
+                else:
+                    embeds = torch.empty(0, 512).to(state.device) # Fallback
 
-            finally:
-                if os.path.exists(tmp_path):
-                    os.unlink(tmp_path)
+            elif source_type == "Random":
+                embeds = VLMService.get_random_embedding(sigma=reparam_sigma)
+            
+            else:
+                raise HTTPException(status_code=400, detail=f"Unknown source type: {source_type}")
+                
+            return embeds, timestamps, is_video
+
+        # 1. Get Embeddings for A and B
+        embeds_a, timestamps_a, is_video_a = await get_embeddings(source_a_type, source_a_text, source_a_file)
+        embeds_b, timestamps_b, is_video_b = await get_embeddings(source_b_type, source_b_text, source_b_file)
         
-        # 2. Process Image (Single)
-        else:
-            # Handle Image Embed
-            if image_source == "Random":
-                image_embeds = VLMService.get_random_embedding()
-            elif image_source == "Image" and image:
-                content = await image.read()
-                raw_image = Image.open(io.BytesIO(content)).convert("RGB")
-                image_embeds = VLMService.get_image_embedding(raw_image)
-            else:
-                 raise HTTPException(status_code=400, detail="Valid image source required")
-
-            # Handle Text Embed
-            if text_source == "Text" and text:
-                text_embeds = VLMService.get_text_embedding(text)
-            elif text_source == "Random":
-                 text_embeds = VLMService.get_random_embedding()
-            else:
-                 raise HTTPException(status_code=400, detail="Valid text source required")
-            
-            # Compute Sim
-            sim, angle = VLMService.compute_similarity(text_embeds, image_embeds)
-            
-            end_time = time.time()
-            duration_ms = (end_time - start_time) * 1000
-            
-            return ImagePredictionResponse(
-                score=sim,
-                angle=angle,
-                time=duration_ms
+        # 2. Compute Similarity based on types
+        res_type = "scalar"
+        score = None
+        curve = None
+        matrix = None
+        best_frame = None
+        avg_score = None
+        
+        # Case 1: Video vs Video -> Matrix
+        if is_video_a and is_video_b:
+            res_type = "matrix"
+            sim_mat = VLMService.compute_similarity_matrix(embeds_a, embeds_b) # [Na, Nb]
+            matrix = SimilarityMatrix(
+                matrix=sim_mat.tolist(),
+                rows_time=timestamps_a,
+                cols_time=timestamps_b
             )
+            avg_score = float(sim_mat.mean())
+            
+        # Case 2: Video vs Static (or Static vs Video) -> Curve
+        # We need to map to "Curve" logic. 
+        # Requirement: "Video vs Image/Text -> Similarity Curve".
+        # If A is video, curve is over A. If B is video, curve is over B?
+        # Spec says: "Video vs Text: Calculate similarity of each frame in Video A vs Text."
+        # What if "Image vs Video"? Usually "Video vs Image".
+        # Let's support A=Video vs B=Static.
+        # If A=Static and B=Video, we can transpose or just treat as curve over B.
+        elif is_video_a and not is_video_b:
+            res_type = "curve"
+            # [Na, D] @ [1, D].T -> [Na, 1]
+            sims = (embeds_a @ embeds_b.T).squeeze(1).cpu().numpy()
+            
+            curve_results = []
+            for i, s in enumerate(sims):
+                curve_results.append(FrameResult(time=timestamps_a[i], score=max(-1.0, min(1.0, float(s)))))
+            
+            curve = curve_results
+            best_frame = max(curve, key=lambda x: x.score) if curve else None
+            avg_score = sum(r.score for r in curve) / len(curve) if curve else 0.0
+
+        elif not is_video_a and is_video_b:
+            # Curve over B
+            res_type = "curve"
+            # [1, D] @ [Nb, D].T -> [1, Nb]
+            sims = (embeds_a @ embeds_b.T).squeeze(0).cpu().numpy()
+            
+            curve_results = []
+            for i, s in enumerate(sims):
+                curve_results.append(FrameResult(time=timestamps_b[i], score=max(-1.0, min(1.0, float(s)))))
+            
+            curve = curve_results
+            best_frame = max(curve, key=lambda x: x.score) if curve else None
+            avg_score = sum(r.score for r in curve) / len(curve) if curve else 0.0
+            
+        # Case 3: Static vs Static -> Scalar
+        else:
+            res_type = "scalar"
+            s, _ = VLMService.compute_similarity(embeds_a, embeds_b)
+            score = s
+            
+        end_time = time.time()
+        duration_ms = (end_time - start_time) * 1000
+        
+        return GenericAnalysisResponse(
+            type=res_type,
+            score=score,
+            curve=curve,
+            matrix=matrix,
+            best_frame=best_frame,
+            average_score=avg_score,
+            time_taken_ms=duration_ms
+        )
 
     except HTTPException as he:
         raise he
     except Exception as e:
         print(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        for p in temp_files:
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except:
+                    pass

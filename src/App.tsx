@@ -8,20 +8,22 @@ import { usePrediction } from './hooks/usePrediction';
 export default function App() {
     const appState = useAppState();
     const { status: modelStatus, message: modelMsg, loadModel } = useModel();
-    const { calculating, results, predict } = usePrediction();
+    const { predict, calculating, results, error } = usePrediction();
 
-    const handleLoadModel = () => {
-        const id = appState.modelPreset === 'custom' ? appState.customModelId : appState.modelPreset;
-        loadModel(id, appState.useGpu);
+    const handleLoadModel = async () => {
+        await loadModel(appState.modelPreset, appState.customModelId, appState.useGpu);
     };
 
-    const handleCalculate = () => {
-        predict(
-            appState.imageSource,
-            appState.textSource,
-            appState.textInput,
-            appState.selectedImage,
-            appState.selectedVideo
+    const handleCalculate = async () => {
+        await predict(
+            appState.sourceAType,
+            appState.sourceBType,
+            appState.sourceAText,
+            appState.sourceBText,
+            appState.sourceAFile,
+            appState.sourceBFile,
+            appState.reparamSigma,
+            appState.textEmbedType
         );
     };
 

@@ -1,8 +1,22 @@
 import { useRef } from 'react';
-import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Type, MoreHorizontal } from 'lucide-react';
+import { SourceType, AppState, TextEmbedType } from '../hooks/useAppState';
 
 interface SidebarProps {
-    state: any; // Using any for brevity in this prompt, ideally AppState & Actions
+    state: AppState & {
+        setTab: (t: any) => void;
+        setSourceAType: (t: SourceType) => void;
+        setSourceBType: (t: SourceType) => void;
+        setSourceAText: (t: string) => void;
+        setSourceBText: (t: string) => void;
+        setSourceAFile: (f: File | null) => void;
+        setSourceBFile: (f: File | null) => void;
+        setModelPreset: (s: string) => void;
+        setCustomModelId: (s: string) => void;
+        setUseGpu: (b: boolean) => void;
+        setReparamSigma: (n: number) => void;
+        setTextEmbedType: (t: TextEmbedType) => void;
+    };
     onLoadModel: () => void;
     modelStatus: 'idle' | 'loading' | 'ready' | 'error';
     modelStatusMsg?: string;
@@ -11,40 +25,132 @@ interface SidebarProps {
 export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMsg }: SidebarProps) {
     const {
         tab, setTab,
-        imageSource, setImageSource,
-        textSource, setTextSource,
+        sourceAType, setSourceAType,
+        sourceBType, setSourceBType,
+        sourceAText, setSourceAText,
+        sourceBText, setSourceBText,
+        sourceAFile, setSourceAFile,
+        sourceBFile, setSourceBFile,
         modelPreset, setModelPreset,
         customModelId, setCustomModelId,
         useGpu, setUseGpu,
-        selectedImage, setSelectedImage,
-        selectedVideo, setSelectedVideo,
-        textInput, setTextInput
+        reparamSigma, setReparamSigma,
+        textEmbedType, setTextEmbedType
     } = state;
 
-    const imageInputRef = useRef<HTMLInputElement>(null);
-    const videoInputRef = useRef<HTMLInputElement>(null);
+    const fileInputARef = useRef<HTMLInputElement>(null);
+    const fileInputBRef = useRef<HTMLInputElement>(null);
 
-    const handleImageDrop = (e: React.DragEvent) => {
+    const handleFileDrop = (e: React.DragEvent, target: 'A' | 'B', expectedType: SourceType) => {
         e.preventDefault();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) setSelectedImage(file);
+            const setter = target === 'A' ? setSourceAFile : setSourceBFile;
+
+            if (expectedType === 'Image' && file.type.startsWith('image/')) setter(file);
+            if (expectedType === 'Video' && file.type.startsWith('video/')) setter(file);
         }
     };
 
-    const handleVideoDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('video/')) setSelectedVideo(file);
-        }
+    const renderSourceSection = (
+        label: string,
+        type: SourceType,
+        setType: (t: SourceType) => void,
+        textVal: string,
+        setTextVal: (s: string) => void,
+        fileVal: File | null,
+        setFileVal: (f: File | null) => void,
+        inputRef: React.RefObject<HTMLInputElement>,
+        target: 'A' | 'B'
+    ) => {
+        return (
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 block">{label} Type</label>
+                <div className="relative">
+                    <select
+                        value={type}
+                        onChange={(e) => setType(e.target.value as SourceType)}
+                        className="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8"
+                    >
+                        <option value="Image">Image</option>
+                        <option value="Video">Video</option>
+                        <option value="Text">Text</option>
+                        <option value="Random">Random Vector</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                </div>
+
+                {/* Content Input */}
+                <div className="pt-2">
+                    {type === 'Text' && (
+                        <textarea
+                            value={textVal}
+                            onChange={(e) => setTextVal(e.target.value)}
+                            placeholder={`Enter text for ${label}...`}
+                            className="w-full h-32 p-3 bg-white border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400 text-sm"
+                        />
+                    )}
+
+                    {(type === 'Image' || type === 'Video') && (
+                        <div>
+                            {!fileVal ? (
+                                <div
+                                    onClick={() => inputRef.current?.click()}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => handleFileDrop(e, target, type)}
+                                    className="border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                                >
+                                    <input
+                                        type="file"
+                                        ref={inputRef}
+                                        className="hidden"
+                                        accept={type === 'Image' ? "image/*" : "video/*"}
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) setFileVal(e.target.files[0]);
+                                        }}
+                                    />
+                                    <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-gray-600">
+                                        <div className="p-2 bg-white rounded-full shadow-sm">
+                                            {type === 'Image' ? <UploadCloud size={20} /> : <Video size={20} />}
+                                        </div>
+                                        <div className="text-center px-4">
+                                            <p className="text-xs font-medium text-gray-900">Upload {type}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative border-2 border-gray-200 bg-gray-50 rounded-xl h-32 flex items-center justify-center overflow-hidden">
+                                    {type === 'Image' ? (
+                                        <img src={URL.createObjectURL(fileVal)} className="w-full h-full object-contain p-2" alt="Preview" />
+                                    ) : (
+                                        <video src={URL.createObjectURL(fileVal)} className="w-full h-full object-contain p-2" />
+                                    )}
+                                    <button
+                                        onClick={() => setFileVal(null)}
+                                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-sm hover:bg-red-50 text-gray-500 hover:text-red-500"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {type === 'Random' && (
+                        <div className="h-32 bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400">
+                            <Dice5 size={24} className="opacity-50 mb-2" />
+                            <p className="text-xs font-medium uppercase tracking-wider">Random Vector</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     return (
         <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full border-r border-gray-200 z-10 shadow-lg md:shadow-none bg-gray-50 flex flex-col p-6">
-
             {/* Header */}
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-6">
                 <div className="p-2 bg-black text-white rounded-lg">
                     <Settings data-testid="settings-icon" size={20} />
                 </div>
@@ -70,152 +176,23 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
             <div className="space-y-8 flex-1 overflow-y-auto">
                 {/* Source Settings */}
                 {tab === 'source' && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
-                        {/* Image Source */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 block">Image Source</label>
-                            <div className="relative">
-                                <select
-                                    value={imageSource}
-                                    onChange={(e) => setImageSource(e.target.value)}
-                                    className="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8"
-                                >
-                                    <option value="Image">Upload Image</option>
-                                    <option value="Video">Upload Video</option>
-                                    <option value="Random">Random Vector</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
-                            </div>
+                    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+                        {renderSourceSection("Source A", sourceAType, setSourceAType, sourceAText, setSourceAText, sourceAFile, setSourceAFile, fileInputARef, 'A')}
 
-                            {/* Image Drop Zone */}
-                            {imageSource === 'Image' && (
-                                <div className="pt-2">
-                                    {!selectedImage ? (
-                                        <div
-                                            onClick={() => imageInputRef.current?.click()}
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDrop={handleImageDrop}
-                                            className="border-2 border-dashed border-gray-300 rounded-xl h-48 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                                        >
-                                            <input
-                                                type="file"
-                                                ref={imageInputRef}
-                                                className="hidden"
-                                                accept="image/png, image/jpeg, image/jpg"
-                                                onChange={(e) => {
-                                                    if (e.target.files?.[0]) setSelectedImage(e.target.files[0]);
-                                                }}
-                                            />
-                                            <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-gray-600">
-                                                <div className="p-3 bg-white rounded-full shadow-sm">
-                                                    <UploadCloud size={24} />
-                                                </div>
-                                                <div className="text-center px-4">
-                                                    <p className="text-xs font-medium text-gray-900">Click to upload</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="relative border-2 border-gray-200 bg-gray-50 rounded-xl h-48 flex items-center justify-center overflow-hidden">
-                                            <img src={URL.createObjectURL(selectedImage)} className="w-full h-full object-contain p-2" alt="Preview" />
-                                            <button
-                                                onClick={() => setSelectedImage(null)}
-                                                className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-sm hover:bg-red-50 text-gray-500 hover:text-red-500"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Video Drop Zone */}
-                            {imageSource === 'Video' && (
-                                <div className="pt-2">
-                                    {!selectedVideo ? (
-                                        <div
-                                            onClick={() => videoInputRef.current?.click()}
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDrop={handleVideoDrop}
-                                            className="border-2 border-dashed border-gray-300 rounded-xl h-48 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                                        >
-                                            <input
-                                                type="file"
-                                                ref={videoInputRef}
-                                                className="hidden"
-                                                accept="video/mp4, video/webm, video/ogg"
-                                                onChange={(e) => {
-                                                    if (e.target.files?.[0]) setSelectedVideo(e.target.files[0]);
-                                                }}
-                                            />
-                                            <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-gray-600">
-                                                <div className="p-3 bg-white rounded-full shadow-sm">
-                                                    <Video size={24} />
-                                                </div>
-                                                <div className="text-center px-4">
-                                                    <p className="text-xs font-medium text-gray-900">Click to upload video</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="relative border-2 border-gray-200 bg-gray-50 rounded-xl h-48 flex items-center justify-center overflow-hidden">
-                                            <video src={URL.createObjectURL(selectedVideo)} controls className="w-full h-full object-contain p-2" />
-                                            <button
-                                                onClick={() => setSelectedVideo(null)}
-                                                className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-sm hover:bg-red-50 text-gray-500 hover:text-red-500"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {imageSource === 'Random' && (
-                                <div className="h-48 bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400 mt-2">
-                                    <Dice5 size={32} className="opacity-50 mb-2" />
-                                    <p className="text-xs font-medium uppercase tracking-wider">Random Vector</p>
-                                </div>
-                            )}
+                        <div className="relative flex py-1 items-center">
+                            <div className="flex-grow border-t border-gray-200"></div>
+                            <span className="flex-shrink-0 mx-4 text-gray-300 text-xs uppercase font-semibold">VS</span>
+                            <div className="flex-grow border-t border-gray-200"></div>
                         </div>
 
-                        {/* Text Source */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 block">Text Source</label>
-                            <div className="relative">
-                                <select
-                                    value={textSource}
-                                    onChange={(e) => setTextSource(e.target.value)}
-                                    className="w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all pr-8"
-                                >
-                                    <option value="Text">Text Prompt</option>
-                                    <option value="Random">Random Vector</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
-                            </div>
-
-                            {textSource === 'Text' ? (
-                                <div className="pt-2">
-                                    <textarea
-                                        value={textInput}
-                                        onChange={(e) => setTextInput(e.target.value)}
-                                        placeholder="Enter description..."
-                                        className="w-full h-40 p-3 bg-white border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all placeholder:text-gray-400 text-sm"
-                                    />
-                                </div>
-                            ) : (
-                                <div className="h-40 bg-slate-100 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-slate-400 mt-2">
-                                    <Dice5 size={32} className="opacity-50 mb-2" />
-                                    <p className="text-xs font-medium uppercase tracking-wider">Random Vector</p>
-                                </div>
-                            )}
-                        </div>
+                        {renderSourceSection("Source B", sourceBType, setSourceBType, sourceBText, setSourceBText, sourceBFile, setSourceBFile, fileInputBRef, 'B')}
                     </div>
                 )}
 
                 {/* General Settings */}
                 {tab === 'general' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                        {/* Model Selection */}
                         <div className="space-y-3">
                             <label className="text-sm font-medium text-gray-700 block mb-1">Select Model</label>
                             <div className="relative">
@@ -260,23 +237,18 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             </button>
 
                             {/* Status */}
-                            <div className="min-h-[60px]">
+                            <div className="min-h-[40px]">
                                 {modelStatus === 'loading' && (
-                                    <div className="space-y-2 animate-pulse">
-                                        <div className="text-xs text-gray-600">Loading Model...</div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                            <div className="bg-black h-full w-2/3 animate-[shimmer_1s_infinite]"></div>
-                                        </div>
-                                    </div>
+                                    <div className="text-xs text-gray-600 animate-pulse">Loading Model...</div>
                                 )}
                                 {modelStatus === 'ready' && (
-                                    <div className="flex items-center gap-2 text-green-700 text-sm bg-green-50 p-3 rounded-md border border-green-100 fade-in">
+                                    <div className="flex items-center gap-2 text-green-700 text-sm bg-green-50 p-2 rounded-md border border-green-100 fade-in">
                                         <CheckCircle2 size={16} />
-                                        <span>Model loaded & ready.</span>
+                                        <span>Model loaded.</span>
                                     </div>
                                 )}
                                 {modelStatus === 'error' && (
-                                    <div className="flex items-start gap-2 text-red-700 text-sm bg-red-50 p-3 rounded-md border border-red-100 fade-in">
+                                    <div className="flex items-start gap-2 text-red-700 text-sm bg-red-50 p-2 rounded-md border border-red-100 fade-in">
                                         <AlertCircle size={16} className="mt-0.5 shrink-0" />
                                         <span className="leading-snug break-words">{modelStatusMsg || "Error"}</span>
                                     </div>
@@ -286,32 +258,76 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
 
                         <div className="h-px bg-gray-200"></div>
 
-                        {/* GPU Setting */}
-                        <div className="space-y-4 pt-2">
-                            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-md transition-colors ${useGpu ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
-                                        {useGpu ? <Zap size={18} /> : <Cpu size={18} />}
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-gray-900">GPU Acceleration</span>
-                                        <span className="text-xs text-gray-500">{useGpu ? 'Server GPU (CUDA)' : 'CPU Mode'}</span>
-                                    </div>
+                        {/* Analysis Settings */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <MoreHorizontal size={16} />
+                                Analysis Settings
+                            </h3>
+
+                            {/* Text Embed Type */}
+                            <div>
+                                <label className="text-xs font-medium text-gray-500 block mb-1">Text Embedding Strategy</label>
+                                <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-md">
+                                    <button
+                                        onClick={() => setTextEmbedType('projected')}
+                                        className={`flex-1 text-xs py-1.5 rounded transition-all ${textEmbedType === 'projected' ? 'bg-white shadow-sm font-medium text-black' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Projected
+                                    </button>
+                                    <button
+                                        onClick={() => setTextEmbedType('pooler_output')}
+                                        className={`flex-1 text-xs py-1.5 rounded transition-all ${textEmbedType === 'pooler_output' ? 'bg-white shadow-sm font-medium text-black' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Pooler Output
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setUseGpu(!useGpu)}
-                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGpu ? 'bg-black' : 'bg-gray-200'}`}
-                                >
-                                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGpu ? 'translate-x-5' : 'translate-x-0'}`}></span>
-                                </button>
                             </div>
+
+                            {/* Reparameterization */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-medium text-gray-500">Reparameterization Sigma</label>
+                                    <span className="text-xs font-mono bg-gray-100 px-1 rounded">{reparamSigma.toFixed(2)}</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={reparamSigma}
+                                    onChange={(e) => setReparamSigma(parseFloat(e.target.value))}
+                                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                                />
+                                <p className="text-[10px] text-gray-400">Add noise to embeddings to test robustness.</p>
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-gray-200"></div>
+
+                        {/* GPU Setting */}
+                        <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-md transition-colors ${useGpu ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
+                                    {useGpu ? <Zap size={18} /> : <Cpu size={18} />}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-gray-900">GPU Mode</span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setUseGpu(!useGpu)}
+                                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGpu ? 'bg-black' : 'bg-gray-200'}`}
+                            >
+                                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGpu ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                            </button>
                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="text-xs text-gray-400 mt-auto pt-4 border-t border-gray-200">
-                Powered by FastAPI & Transformers
+            <div className="text-xs text-center text-gray-300 mt-auto pt-4 border-t border-gray-200">
+                v2.0 Generic Source Update
             </div>
         </div>
     );
