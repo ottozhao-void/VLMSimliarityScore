@@ -1,5 +1,6 @@
 {
     "name": "vlm-similarity-scorer-client",
+    "type": "module",
     "version": "1.0.0",
     "description": "Frontend for VLM Similarity Scorer",
     "scripts": {
@@ -11,11 +12,17 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@types/react": "^19.2.7",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^5.1.2",
         "typescript": "^5.3.3",
         "vite": "^5.0.12"
     },
     "dependencies": {
         "chart.js": "^4.4.1",
-        "lucide": "^0.321.0"
+        "lucide": "^0.321.0",
+        "lucide-react": "^0.562.0",
+        "react": "^19.2.3",
+        "react-dom": "^19.2.3"
     }
 }

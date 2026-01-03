@@ -6,3 +6,5 @@ pillow
 scikit-learn
 sentencepiece
 protobuf
+torch
+opencv-python
