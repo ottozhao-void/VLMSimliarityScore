@@ -180,8 +180,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                         className="sr-only"
                                     />
                                     <div className={`py-1.5 rounded-md text-xs font-medium border text-center transition-all ${textEmbedTypeLocal === 'projected'
-                                            ? 'bg-black text-white border-black'
-                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                                        ? 'bg-black text-white border-black'
+                                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                                         }`}>
                                         Projected
                                     </div>
@@ -196,8 +196,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                         className="sr-only"
                                     />
                                     <div className={`py-1.5 rounded-md text-xs font-medium border text-center transition-all ${textEmbedTypeLocal === 'pooler_output'
-                                            ? 'bg-black text-white border-black'
-                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                                        ? 'bg-black text-white border-black'
+                                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                                         }`}>
                                         Pooler
                                     </div>
@@ -211,7 +211,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
     };
 
     return (
-        <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full border-r border-gray-200 z-10 shadow-sm bg-[#fafafa] flex flex-col">
+        <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full min-h-0 border-r border-gray-200 z-10 shadow-sm bg-[#fafafa] flex flex-col">
             {/* Header */}
             <div className="p-6 pb-4">
                 <div className="flex items-center gap-3 mb-6">
