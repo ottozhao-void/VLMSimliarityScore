@@ -79,7 +79,11 @@ The project appears to have two components:
 *   **Model Handling:** Models are loaded lazily or via explicit user action to manage memory usage.
 *   **Environment:** The app is designed to run locally, with optional GPU support.
 
-## Code 
+## Code Stye Guidelines
+
+* Modularity: Each feature should be implemented in a separate module, class or function to promote code reusability and maintainability.
+* Documentation: Maintain clear documentation for each module or class, including usage instructions and examples.
+
 
 ## Key Files to Reference
 
