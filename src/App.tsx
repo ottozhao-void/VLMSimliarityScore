@@ -1,9 +1,9 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Toaster } from 'sonner';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
-import { useAppState } from './hooks/useAppState';
+import { useAppState, isSourceReady } from './hooks/useAppState';
 import { useModel } from './hooks/useModel';
 import { usePrediction } from './hooks/usePrediction';
 
@@ -22,7 +22,7 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleCalculate = async () => {
+    const handleCalculate = useCallback(async () => {
         const sigmaA = appState.useReparamA ? appState.reparamSigma : 0;
         const sigmaB = appState.useReparamB ? appState.reparamSigma : 0;
 
@@ -39,7 +39,39 @@ export default function App() {
             appState.textEmbedTypeB,
             appState.videoFps
         );
-    };
+    }, [
+        appState.useReparamA,
+        appState.useReparamB,
+        appState.reparamSigma,
+        appState.sourceAType,
+        appState.sourceBType,
+        appState.sourceAText,
+        appState.sourceBText,
+        appState.sourceAFile,
+        appState.sourceBFile,
+        appState.textEmbedTypeA,
+        appState.textEmbedTypeB,
+        appState.videoFps,
+        predict
+    ]);
+
+    // Global keyboard shortcut: Ctrl+Shift+C (or Cmd+Shift+C on Mac) to trigger Calculate
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Check for Ctrl+Shift+C or Cmd+Shift+C
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toUpperCase() === 'C') {
+                e.preventDefault();
+
+                // Only trigger if sources are ready and not already calculating
+                if (isSourceReady(appState) && !calculating) {
+                    handleCalculate();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [appState, calculating, handleCalculate]);
 
     return (
         <>
@@ -61,3 +93,4 @@ export default function App() {
         </>
     );
 }
+

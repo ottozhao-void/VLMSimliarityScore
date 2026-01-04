@@ -1,16 +1,26 @@
 import { useEffect, useRef, RefObject } from 'react';
 import Chart from 'chart.js/auto';
-import { createSimilarityCurveConfig, extractChartData } from '../utils/chartConfig';
+import { createSimilarityCurveConfig, extractChartData, ChartClickOptions } from '../utils/chartConfig';
+
+export interface SimilarityChartParams {
+    chartRef: RefObject<HTMLCanvasElement | null>;
+    results: any;
+    selectedRow: number | null;
+    onPointClick?: (timeSeconds: number, index: number) => void;
+    sourceATime?: number;  // For vertical annotation line
+}
 
 /**
  * Hook for managing similarity curve Chart.js lifecycle.
- * Handles chart creation, updates, and cleanup.
+ * Handles chart creation, updates, cleanup, and click interactions.
  */
-export function useSimilarityChart(
-    chartRef: RefObject<HTMLCanvasElement | null>,
-    results: any,
-    selectedRow: number | null
-) {
+export function useSimilarityChart({
+    chartRef,
+    results,
+    selectedRow,
+    onPointClick,
+    sourceATime
+}: SimilarityChartParams) {
     const chartInstance = useRef<Chart | null>(null);
 
     useEffect(() => {
@@ -29,10 +39,26 @@ export function useSimilarityChart(
                 const chartData = extractChartData(results, selectedRow);
 
                 if (chartData) {
+                    // Build chart options
+                    const chartOptions: ChartClickOptions = {};
+
+                    if (onPointClick) {
+                        chartOptions.onPointClick = (index, timeLabel) => {
+                            // Parse time from label (e.g., "1.5s" -> 1.5)
+                            const timeSeconds = parseFloat(timeLabel.replace('s', ''));
+                            onPointClick(timeSeconds, index);
+                        };
+                    }
+
+                    if (sourceATime !== undefined) {
+                        chartOptions.sourceAAnnotationTime = sourceATime;
+                    }
+
                     const config = createSimilarityCurveConfig(
                         chartData.labels,
                         chartData.scores,
-                        chartData.labelTitle
+                        chartData.labelTitle,
+                        chartOptions
                     );
                     chartInstance.current = new Chart(ctx, config);
                 }
@@ -45,7 +71,8 @@ export function useSimilarityChart(
                 chartInstance.current = null;
             }
         };
-    }, [results, selectedRow, chartRef]);
+    }, [results, selectedRow, chartRef, onPointClick, sourceATime]);
 
     return chartInstance;
 }
+

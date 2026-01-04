@@ -1,13 +1,59 @@
-import { ChartConfiguration } from 'chart.js';
+import { ChartConfiguration, Chart } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
+
+// Register the annotation plugin
+Chart.register(annotationPlugin);
+
+export interface ChartClickOptions {
+    onPointClick?: (index: number, timeLabel: string) => void;
+    sourceAAnnotationTime?: number;  // Time in seconds for vertical dotted line
+}
 
 /**
  * Creates Chart.js configuration for similarity curve visualization.
+ * Supports optional click handler and Source A annotation line.
  */
 export function createSimilarityCurveConfig(
     labels: string[],
     scores: number[],
-    labelTitle: string
+    labelTitle: string,
+    options?: ChartClickOptions
 ): ChartConfiguration<'line'> {
+    const { onPointClick, sourceAAnnotationTime } = options || {};
+
+    // Build annotation config if sourceAAnnotationTime is provided
+    const annotationConfig: any = {};
+    if (sourceAAnnotationTime !== undefined) {
+        // Find the closest label index for the annotation
+        const timeLabels = labels.map(l => parseFloat(l.replace('s', '')));
+        let annotationIndex = 0;
+        let minDiff = Math.abs(timeLabels[0] - sourceAAnnotationTime);
+        for (let i = 1; i < timeLabels.length; i++) {
+            const diff = Math.abs(timeLabels[i] - sourceAAnnotationTime);
+            if (diff < minDiff) {
+                minDiff = diff;
+                annotationIndex = i;
+            }
+        }
+
+        annotationConfig.sourceALine = {
+            type: 'line',
+            xMin: annotationIndex,
+            xMax: annotationIndex,
+            borderColor: 'rgba(59, 130, 246, 0.8)',  // Blue color
+            borderWidth: 2,
+            borderDash: [5, 5],  // Dotted line
+            label: {
+                display: true,
+                content: `Source A: ${sourceAAnnotationTime.toFixed(1)}s`,
+                position: 'start',
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                color: 'white',
+                font: { size: 10 }
+            }
+        };
+    }
+
     return {
         type: 'line',
         data: {
@@ -18,14 +64,28 @@ export function createSimilarityCurveConfig(
                 borderColor: 'rgb(0, 0, 0)',
                 backgroundColor: 'rgba(0, 0, 0, 0.1)',
                 tension: 0.2,
-                fill: true
+                fill: true,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointHitRadius: 10
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { display: true } },
+            onClick: onPointClick ? (_event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    onPointClick(index, labels[index]);
+                }
+            } : undefined,
+            plugins: {
+                legend: { display: true },
+                annotation: {
+                    annotations: annotationConfig
+                }
+            },
             scales: {
                 y: {
                     min: 0,

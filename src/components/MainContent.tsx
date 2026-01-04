@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
-import { Play, BarChart3, Clock, Grid, Activity, MousePointer2 } from 'lucide-react';
+import { useRef, useState, useMemo } from 'react';
+import { Play, BarChart3, Clock, Grid, Activity, MousePointer2, ImageIcon } from 'lucide-react';
 import { AppState, isSourceReady } from '../hooks/useAppState';
 import { useSimilarityChart } from '../hooks/useSimilarityChart';
 import { useHeatmapChart } from '../hooks/useHeatmapChart';
-import VideoPlayer from './VideoPlayer';
+import VideoPlayer, { VideoPlayerHandle } from './VideoPlayer';
 
 interface MainContentProps {
     state: AppState;
@@ -15,12 +15,34 @@ interface MainContentProps {
 export default function MainContent({ state, onCalculate, calculating, results }: MainContentProps) {
     const chartRef = useRef<HTMLCanvasElement | null>(null);
     const heatmapRef = useRef<HTMLCanvasElement | null>(null);
+    const videoPlayerRef = useRef<VideoPlayerHandle>(null);
 
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [showUpperTriangle, setShowUpperTriangle] = useState(false);
 
+    // Get Source A timestamp for annotation line (when a row is selected in matrix mode)
+    const sourceATime = useMemo(() => {
+        if (results?.type === 'matrix' && selectedRow !== null && results.matrix?.rows_time) {
+            return results.matrix.rows_time[selectedRow];
+        }
+        return undefined;
+    }, [results, selectedRow]);
+
+    // Handle chart point click → seek video to that time
+    const handleChartPointClick = (timeSeconds: number, _index: number) => {
+        if (videoPlayerRef.current) {
+            videoPlayerRef.current.seekTo(timeSeconds);
+        }
+    };
+
     // Use extracted hooks for chart logic
-    useSimilarityChart(chartRef, results, selectedRow);
+    useSimilarityChart({
+        chartRef,
+        results,
+        selectedRow,
+        onPointClick: handleChartPointClick,
+        sourceATime
+    });
 
     const { hoverInfo, handleHeatmapMove, handleHeatmapLeave } = useHeatmapChart({
         heatmapRef,
@@ -39,6 +61,13 @@ export default function MainContent({ state, onCalculate, calculating, results }
         }
     };
 
+    // Extract similarity curve for VideoPlayer overlay
+    const similarityCurve = useMemo(() => {
+        if (results?.type === 'curve' && results.curve) {
+            return results.curve;
+        }
+        return undefined;
+    }, [results]);
 
 
     return (
@@ -54,7 +83,11 @@ export default function MainContent({ state, onCalculate, calculating, results }
                 {/* QVHighlights Video Player */}
                 {state.selectedQVQuery && (
                     <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-                        <VideoPlayer query={state.selectedQVQuery} />
+                        <VideoPlayer
+                            ref={videoPlayerRef}
+                            query={state.selectedQVQuery}
+                            similarityCurve={similarityCurve}
+                        />
                     </div>
                 )}
 
@@ -193,16 +226,35 @@ export default function MainContent({ state, onCalculate, calculating, results }
                             </div>
                         )}
 
-                        {/* Line Chart */}
+                        {/* Line Chart with Source A context */}
                         {(results.type === 'curve' || (results.type === 'matrix' && selectedRow !== null)) && (
                             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-4 text-gray-500">
-                                    <BarChart3 size={20} />
-                                    <span className="text-sm font-bold uppercase text-gray-700">
-                                        {results.type === 'curve' ? 'Similarity Curve' : 'Frame Similarity Detail'}
-                                    </span>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-gray-500">
+                                        <BarChart3 size={20} />
+                                        <span className="text-sm font-bold uppercase text-gray-700">
+                                            {results.type === 'curve' ? 'Similarity Curve' : 'Frame Similarity Detail'}
+                                        </span>
+                                    </div>
+
+                                    {/* Source A Frame Context (for matrix mode) */}
+                                    {results.type === 'matrix' && selectedRow !== null && (
+                                        <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
+                                            <ImageIcon size={14} className="text-blue-500" />
+                                            <span className="text-xs text-blue-700 font-medium">
+                                                Source A @ {results.matrix.rows_time[selectedRow].toFixed(1)}s
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="relative h-64 w-full">
+
+                                {/* Click instruction */}
+                                <p className="text-xs text-gray-400 mb-3">
+                                    <MousePointer2 size={12} className="inline mr-1" />
+                                    Click on any point to seek the video to that timestamp.
+                                </p>
+
+                                <div className="relative h-64 w-full cursor-pointer">
                                     <canvas ref={chartRef}></canvas>
                                 </div>
                             </div>
