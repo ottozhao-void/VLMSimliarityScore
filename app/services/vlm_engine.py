@@ -7,6 +7,7 @@ import math
 import io
 import tempfile
 import os
+import numpy as np
 from typing import Optional, List, Union, Tuple, Any
 import torch.distributions as dist
 from app.models.schemas import GenericAnalysisResponse, FrameResult, SimilarityMatrix
