@@ -3,6 +3,7 @@ import { Play, BarChart3, Clock, Grid, Activity, MousePointer2 } from 'lucide-re
 import { AppState, isSourceReady } from '../hooks/useAppState';
 import { useSimilarityChart } from '../hooks/useSimilarityChart';
 import { useHeatmapChart } from '../hooks/useHeatmapChart';
+import VideoPlayer from './VideoPlayer';
 
 interface MainContentProps {
     state: AppState;
@@ -49,6 +50,13 @@ export default function MainContent({ state, onCalculate, calculating, results }
                     <h2 className="text-2xl font-bold text-gray-900">Similarity Analysis</h2>
                     <p className="text-gray-500 mt-1">Configure sources on the left and run analysis.</p>
                 </div>
+
+                {/* QVHighlights Video Player */}
+                {state.selectedQVQuery && (
+                    <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                        <VideoPlayer query={state.selectedQVQuery} />
+                    </div>
+                )}
 
                 {/* Calculate Button */}
                 <div className="flex items-center justify-end pt-4 border-t border-gray-100">

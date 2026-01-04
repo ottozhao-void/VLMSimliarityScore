@@ -43,3 +43,35 @@ class VideoListResponse(BaseModel):
     videos: List[VideoFileInfo]
     total: int
     hasMore: bool
+
+
+# QVHighlights Dataset Models
+
+class QVHighlightsQueryInfo(BaseModel):
+    """Information about a single QVHighlights query."""
+    qid: int
+    query: str
+    vid: str
+    duration: float
+    relevant_windows: List[List[float]]
+
+
+class QVHighlightsQueryListResponse(BaseModel):
+    """Response for QVHighlights query list endpoint."""
+    queries: List[QVHighlightsQueryInfo]
+    total: int
+    hasMore: bool
+
+
+class PathSettingsRequest(BaseModel):
+    """Request for updating path settings."""
+    datasetPath: str
+    videoPath: str
+
+
+class PathSettingsResponse(BaseModel):
+    """Response for path settings operations."""
+    valid: bool
+    errors: List[str] = []
+    datasetPath: Optional[str] = None
+    videoPath: Optional[str] = None

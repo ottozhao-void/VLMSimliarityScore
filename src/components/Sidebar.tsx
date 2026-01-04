@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
-import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Server, HardDrive, Film } from 'lucide-react';
-import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef } from '../hooks/useAppState';
+import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Server, HardDrive, Film, Database, Save, Loader2 } from 'lucide-react';
+import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef, VideoSubMode, QVHighlightsQuery } from '../hooks/useAppState';
 import ServerFilePicker from './ServerFilePicker';
+import QVHighlightsQueryPicker from './QVHighlightsQueryPicker';
 import { ServerVideoFile } from '../hooks/useServerVideos';
+import { useSettings } from '../hooks/useSettings';
 
 interface SidebarProps {
     state: AppState & {
@@ -22,6 +24,11 @@ interface SidebarProps {
         setTextEmbedTypeA: (t: TextEmbedType) => void;
         setTextEmbedTypeB: (t: TextEmbedType) => void;
         setVideoFps: (n: number) => void;
+        // QVHighlights
+        setVideoSubMode: (m: VideoSubMode) => void;
+        setSelectedQVQuery: (q: QVHighlightsQuery | null) => void;
+        setDatasetPath: (p: string) => void;
+        setVideoPath: (p: string) => void;
     };
     onLoadModel: () => void;
     modelStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -45,7 +52,12 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         useReparamB, setUseReparamB,
         textEmbedTypeA, setTextEmbedTypeA,
         textEmbedTypeB, setTextEmbedTypeB,
-        videoFps, setVideoFps
+        videoFps, setVideoFps,
+        // QVHighlights
+        videoSubMode, setVideoSubMode,
+        selectedQVQuery, setSelectedQVQuery,
+        datasetPath, setDatasetPath,
+        videoPath, setVideoPath
     } = state;
 
     const fileInputARef = useRef<HTMLInputElement>(null);
@@ -54,9 +66,17 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
     // State for server file picker modal
     const [pickerTarget, setPickerTarget] = useState<'A' | 'B' | null>(null);
 
+    // State for QVHighlights query picker modal
+    const [qvPickerOpen, setQvPickerOpen] = useState(false);
+
     // State for video source mode (local vs server)
     const [videoModeA, setVideoModeA] = useState<'local' | 'server'>('local');
     const [videoModeB, setVideoModeB] = useState<'local' | 'server'>('local');
+
+    // Settings hook for path management
+    const { saving, validationErrors, saveSettings } = useSettings();
+    const [editDatasetPath, setEditDatasetPath] = useState(datasetPath);
+    const [editVideoPath, setEditVideoPath] = useState(videoPath);
 
     const handleFileDrop = (
         e: React.DragEvent,
@@ -153,8 +173,43 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
 
                             return (
                                 <div className="space-y-2">
-                                    {/* Local/Server toggle for Video type */}
-                                    {type === 'Video' && (
+                                    {/* Video Sub-Mode Toggle (Local/QVHighlights) - only for Video and Target A */}
+                                    {type === 'Video' && target === 'A' && (
+                                        <div className="flex p-0.5 bg-gray-100 rounded-lg mb-2">
+                                            <button
+                                                onClick={() => {
+                                                    setVideoSubMode('Local');
+                                                    setSelectedQVQuery(null);
+                                                    setSourceAFile(null);
+                                                    setSourceBFile(null);
+                                                }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${videoSubMode === 'Local'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                    }`}
+                                            >
+                                                <HardDrive size={12} />
+                                                Local
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setVideoSubMode('QVHighlights');
+                                                    setSourceAFile(null);
+                                                    setSourceBFile(null);
+                                                }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${videoSubMode === 'QVHighlights'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                    }`}
+                                            >
+                                                <Database size={12} />
+                                                QVHighlights
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Local/Server toggle for Video type (only in Local sub-mode) */}
+                                    {type === 'Video' && videoSubMode === 'Local' && (
                                         <div className="flex p-0.5 bg-gray-100 rounded-lg">
                                             <button
                                                 onClick={() => { setVideoMode('local'); setFileVal(null); }}
@@ -164,7 +219,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                                     }`}
                                             >
                                                 <HardDrive size={12} />
-                                                Local
+                                                Upload
                                             </button>
                                             <button
                                                 onClick={() => { setVideoMode('server'); setFileVal(null); }}
@@ -179,8 +234,44 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                         </div>
                                     )}
 
-                                    {/* File upload/selection area */}
-                                    {!fileVal ? (
+                                    {/* QVHighlights mode - show query selection */}
+                                    {type === 'Video' && videoSubMode === 'QVHighlights' && target === 'A' && (
+                                        <>
+                                            {!selectedQVQuery ? (
+                                                <div
+                                                    onClick={() => setQvPickerOpen(true)}
+                                                    className="border-2 border-dashed border-blue-200 rounded-lg h-24 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+                                                >
+                                                    <div className="flex flex-col items-center gap-1 text-blue-400 group-hover:text-blue-600">
+                                                        <Database size={18} />
+                                                        <span className="text-xs font-medium">Select Query</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="relative border border-blue-200 bg-blue-50 rounded-lg p-3 group">
+                                                    <p className="text-xs text-gray-700 line-clamp-2 pr-6">{selectedQVQuery.query}</p>
+                                                    <p className="text-[10px] text-gray-500 mt-1 font-mono">{selectedQVQuery.vid}</p>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedQVQuery(null); setSourceAFile(null); setSourceBFile(null); }}
+                                                        className="absolute top-2 right-2 p-1 bg-white rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-100"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* Show selected video info for Source B when in QVHighlights mode */}
+                                    {type === 'Video' && videoSubMode === 'QVHighlights' && target === 'B' && selectedQVQuery && (
+                                        <div className="border border-blue-200 bg-blue-50 rounded-lg p-3">
+                                            <p className="text-xs text-gray-500 mb-1">Linked to Source A</p>
+                                            <p className="text-[10px] text-gray-700 font-mono">{selectedQVQuery.vid}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Regular file upload/selection area (for Local mode) */}
+                                    {(type === 'Image' || (type === 'Video' && videoSubMode === 'Local')) && !fileVal ? (
                                         <div
                                             onClick={() => {
                                                 if (type === 'Video' && videoMode === 'server') {
@@ -494,6 +585,70 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                 <span>30 FPS</span>
                             </div>
                         </div>
+
+                        <div className="h-px bg-gray-200"></div>
+
+                        {/* QVHighlights Path Settings */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Database size={16} className="text-gray-500" />
+                                <span className="text-sm font-bold text-gray-900">QVHighlights Paths</span>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-semibold text-gray-500 block mb-1">Dataset Path</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={editDatasetPath}
+                                            onChange={(e) => setEditDatasetPath(e.target.value)}
+                                            placeholder="/path/to/dataset"
+                                            className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-900 focus:outline-none focus:ring-1 focus:ring-black/10 focus:border-black/30"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-semibold text-gray-500 block mb-1">Video Path</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={editVideoPath}
+                                            onChange={(e) => setEditVideoPath(e.target.value)}
+                                            placeholder="/path/to/videos"
+                                            className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-900 focus:outline-none focus:ring-1 focus:ring-black/10 focus:border-black/30"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={async () => {
+                                        const success = await saveSettings(editDatasetPath, editVideoPath);
+                                        if (success) {
+                                            setDatasetPath(editDatasetPath);
+                                            setVideoPath(editVideoPath);
+                                        }
+                                    }}
+                                    disabled={saving}
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? (
+                                        <><Loader2 size={14} className="animate-spin" /> Saving...</>
+                                    ) : (
+                                        <><Save size={14} /> Save Paths</>
+                                    )}
+                                </button>
+
+                                {validationErrors.length > 0 && (
+                                    <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                                        {validationErrors.map((err, i) => (
+                                            <p key={i}>{err}</p>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
@@ -522,6 +677,21 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         setPickerTarget(null);
     };
 
+    // Handler for QVHighlights query selection
+    const handleQVQuerySelect = (query: QVHighlightsQuery) => {
+        setSelectedQVQuery(query);
+        // Auto-populate both sources with the same video
+        const serverRef: ServerFileRef = {
+            type: 'server',
+            path: query.vid,
+            name: `${query.vid}.mp4`
+        };
+        setSourceAType('Video');
+        setSourceBType('Video');
+        setSourceAFile(serverRef);
+        setSourceBFile(serverRef);
+    };
+
     return (
         <>
             {sidebarContent}
@@ -531,6 +701,13 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                 isOpen={pickerTarget !== null}
                 onClose={() => setPickerTarget(null)}
                 onSelect={handleServerFileSelect}
+            />
+
+            {/* QVHighlights Query Picker Modal */}
+            <QVHighlightsQueryPicker
+                isOpen={qvPickerOpen}
+                onClose={() => setQvPickerOpen(false)}
+                onSelect={handleQVQuerySelect}
             />
         </>
     );

@@ -3,6 +3,7 @@ import { useState } from 'react';
 export type SourceType = 'Image' | 'Video' | 'Text' | 'Random';
 export type Tab = 'source' | 'general';
 export type TextEmbedType = 'projected' | 'pooler_output';
+export type VideoSubMode = 'Local' | 'QVHighlights';
 
 // Server file reference for files stored on the server
 export interface ServerFileRef {
@@ -16,6 +17,15 @@ export type FileSource = File | ServerFileRef | null;
 
 // Helper type for source-aware state setters
 export type SourceTypeWithClear = (t: SourceType) => void;
+
+// QVHighlights query data
+export interface QVHighlightsQuery {
+    qid: number;
+    query: string;
+    vid: string;
+    duration: number;
+    relevant_windows: number[][];
+}
 
 export interface AppState {
     tab: Tab;
@@ -36,6 +46,12 @@ export interface AppState {
     textEmbedTypeA: TextEmbedType;
     textEmbedTypeB: TextEmbedType;
     videoFps: number;
+
+    // QVHighlights
+    videoSubMode: VideoSubMode;
+    selectedQVQuery: QVHighlightsQuery | null;
+    datasetPath: string;
+    videoPath: string;
 }
 
 export function useAppState() {
@@ -60,6 +76,12 @@ export function useAppState() {
     const [textEmbedTypeA, setTextEmbedTypeA] = useState<TextEmbedType>('projected');
     const [textEmbedTypeB, setTextEmbedTypeB] = useState<TextEmbedType>('projected');
     const [videoFps, setVideoFps] = useState<number>(1);
+
+    // QVHighlights state
+    const [videoSubMode, setVideoSubMode] = useState<VideoSubMode>('Local');
+    const [selectedQVQuery, setSelectedQVQuery] = useState<QVHighlightsQuery | null>(null);
+    const [datasetPath, setDatasetPath] = useState<string>('/data1/zhaofanghan/vmr_dataset/data/qvhighlights');
+    const [videoPath, setVideoPath] = useState<string>('/data1/zhaofanghan/vmr_dataset/qvhilights_videos');
 
     // Wrapper setters that clear content when source type changes
     const setSourceAType = (newType: SourceType) => {
@@ -94,7 +116,12 @@ export function useAppState() {
         useReparamB, setUseReparamB,
         textEmbedTypeA, setTextEmbedTypeA,
         textEmbedTypeB, setTextEmbedTypeB,
-        videoFps, setVideoFps
+        videoFps, setVideoFps,
+        // QVHighlights
+        videoSubMode, setVideoSubMode,
+        selectedQVQuery, setSelectedQVQuery,
+        datasetPath, setDatasetPath,
+        videoPath, setVideoPath
     };
 }
 

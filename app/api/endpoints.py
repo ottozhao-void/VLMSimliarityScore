@@ -1,9 +1,14 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
-from app.models.schemas import LoadModelRequest, GenericAnalysisResponse, VideoListResponse, VideoFileInfo
+from app.models.schemas import (
+    LoadModelRequest, GenericAnalysisResponse, VideoListResponse, VideoFileInfo,
+    QVHighlightsQueryInfo, QVHighlightsQueryListResponse,
+    PathSettingsRequest, PathSettingsResponse
+)
 from app.services.vlm_engine import VLMService
 from app.services.video_browser_service import VideoBrowserService
+from app.services.qvhighlights_service import QVHighlightsService
 from app.services.exceptions import SourceValidationError, VideoProcessingError, UnknownSourceTypeError
 from app.core.state import state
 import time
@@ -72,6 +77,102 @@ async def stream_video(filename: str):
         }
     )
 
+
+# ============================================================
+# QVHighlights Dataset Endpoints
+# ============================================================
+
+@router.get("/qvhighlights/queries", response_model=QVHighlightsQueryListResponse)
+async def list_qvhighlights_queries(
+    query: str = Query("", description="Fuzzy search query on query text"),
+    limit: int = Query(50, ge=1, le=100, description="Max results"),
+    offset: int = Query(0, ge=0, description="Results offset")
+):
+    """
+    List QVHighlights dataset queries with optional fuzzy search.
+    """
+    try:
+        queries, total, has_more = QVHighlightsService.list_queries(query, limit, offset)
+        return QVHighlightsQueryListResponse(
+            queries=[
+                QVHighlightsQueryInfo(
+                    qid=q.qid,
+                    query=q.query,
+                    vid=q.vid,
+                    duration=q.duration,
+                    relevant_windows=q.relevant_windows
+                ) for q in queries
+            ],
+            total=total,
+            hasMore=has_more
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list queries: {str(e)}")
+
+
+@router.get("/qvhighlights/stream/{vid}")
+async def stream_qvhighlights_video(vid: str):
+    """
+    Stream a video file from the QVHighlights dataset by vid.
+    """
+    video_path = QVHighlightsService.get_video_path(vid)
+    if not video_path:
+        raise HTTPException(status_code=404, detail=f"Video not found for vid: {vid}")
+    
+    # Determine MIME type
+    mime_type, _ = mimetypes.guess_type(str(video_path))
+    if not mime_type:
+        mime_type = "video/mp4"
+    
+    file_size = video_path.stat().st_size
+    
+    def iter_file():
+        with open(video_path, "rb") as f:
+            while chunk := f.read(65536):  # 64KB chunks
+                yield chunk
+    
+    return StreamingResponse(
+        iter_file(),
+        media_type=mime_type,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size)
+        }
+    )
+
+
+@router.get("/settings/paths", response_model=PathSettingsResponse)
+async def get_path_settings():
+    """
+    Get current dataset and video path settings.
+    """
+    dataset_path, video_path = QVHighlightsService.get_paths()
+    return PathSettingsResponse(
+        valid=True,
+        datasetPath=dataset_path,
+        videoPath=video_path
+    )
+
+
+@router.post("/settings/paths", response_model=PathSettingsResponse)
+async def update_path_settings(request: PathSettingsRequest):
+    """
+    Validate and update dataset and video path settings.
+    """
+    is_valid, errors = QVHighlightsService.validate_paths(
+        request.datasetPath,
+        request.videoPath
+    )
+    
+    if is_valid:
+        QVHighlightsService.set_paths(request.datasetPath, request.videoPath)
+    
+    return PathSettingsResponse(
+        valid=is_valid,
+        errors=errors,
+        datasetPath=request.datasetPath if is_valid else None,
+        videoPath=request.videoPath if is_valid else None
+    )
 
 @router.post("/predict", response_model=GenericAnalysisResponse)
 async def predict(
