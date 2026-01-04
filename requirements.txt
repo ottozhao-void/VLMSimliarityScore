@@ -8,3 +8,5 @@ sentencepiece
 protobuf
 torch
 opencv-python
+fuzzywuzzy
+python-Levenshtein
