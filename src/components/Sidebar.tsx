@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Settings, ChevronDown, Download, Zap, Cpu, CheckCircle2, AlertCircle, Database, Save, Loader2, Play } from 'lucide-react';
 import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef, QVHighlightsQuery, isSourceReady } from '../hooks/useAppState';
 import ServerFilePicker from './ServerFilePicker';
