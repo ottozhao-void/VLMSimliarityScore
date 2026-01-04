@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo } from 'react';
-import { Play, BarChart3, Clock, Grid, Activity, MousePointer2, ImageIcon } from 'lucide-react';
-import { AppState, isSourceReady } from '../hooks/useAppState';
+import { BarChart3, Clock, Grid, Activity, MousePointer2, ImageIcon } from 'lucide-react';
+import { AppState } from '../hooks/useAppState';
 import { useSimilarityChart } from '../hooks/useSimilarityChart';
 import { useHeatmapChart } from '../hooks/useHeatmapChart';
 import VideoPlayer, { VideoPlayerHandle } from './VideoPlayer';
