@@ -206,7 +206,13 @@ class VLMService:
             if server_path:
                 # Import here to avoid circular imports
                 from app.services.video_browser_service import VideoBrowserService
+                from app.services.qvhighlights_service import QVHighlightsService
+                
                 resolved_path = VideoBrowserService.get_video_path(server_path)
+                if not resolved_path:
+                    # Try QVHighlights as fallback (for vid)
+                    resolved_path = QVHighlightsService.get_video_path(server_path)
+                
                 if not resolved_path:
                     raise SourceValidationError(f"Server video not found: {server_path}")
                 video_path = str(resolved_path)
