@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 import { BarChart3, Clock, Grid, Activity } from 'lucide-react';
 import { AppState } from '../hooks/useAppState';
 import HeatmapChart from './HeatmapChart';
