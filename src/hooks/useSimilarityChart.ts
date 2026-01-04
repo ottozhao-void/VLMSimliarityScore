@@ -26,7 +26,8 @@ export function useSimilarityChart({
     useEffect(() => {
         const shouldShowChart =
             (results?.type === 'curve') ||
-            (results?.type === 'matrix' && selectedRow !== null);
+            (results?.type === 'matrix' && selectedRow !== null) ||
+            (results?.type === 'dataset' && results?.curve);
 
         if (shouldShowChart && chartRef.current) {
             // Destroy existing chart

@@ -21,7 +21,8 @@ export function useHeatmapChart({ heatmapRef, results, selectedRow, showUpperTri
 
     // Render heatmap when results or settings change
     useEffect(() => {
-        if (results?.type === 'matrix' && heatmapRef.current && results.matrix) {
+        const isMatrix = results?.type === 'matrix' || (results?.type === 'dataset' && results?.matrix);
+        if (isMatrix && heatmapRef.current && results.matrix) {
             const canvas = heatmapRef.current;
             const ctx = canvas.getContext('2d');
 
@@ -66,7 +67,8 @@ export function useHeatmapChart({ heatmapRef, results, selectedRow, showUpperTri
 
     // Handle mouse move over heatmap
     const handleHeatmapMove = (e: React.MouseEvent) => {
-        if (!results || results.type !== 'matrix' || !heatmapRef.current) return;
+        const isMatrix = results?.type === 'matrix' || (results?.type === 'dataset' && results?.matrix);
+        if (!results || !isMatrix || !heatmapRef.current) return;
 
         const rect = heatmapRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
