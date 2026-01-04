@@ -68,8 +68,8 @@ export default function SimilarityCurveOverlay({
 
         // Fill with gradient
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
-        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.05)');
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.6)');  // green-500 with opacity
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0.1)');
         ctx.fillStyle = gradient;
         ctx.fill();
 
@@ -84,7 +84,7 @@ export default function SimilarityCurveOverlay({
                 ctx.lineTo(x, y);
             }
         }
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.strokeStyle = 'rgba(22, 163, 74, 0.9)';  // green-600 with high opacity
         ctx.lineWidth = 1.5;
         ctx.stroke();
 

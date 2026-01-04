@@ -16,6 +16,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
     const chartRef = useRef<HTMLCanvasElement | null>(null);
     const heatmapRef = useRef<HTMLCanvasElement | null>(null);
     const videoPlayerRef = useRef<VideoPlayerHandle>(null);
+    const videoContainerRef = useRef<HTMLDivElement>(null);
 
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [showUpperTriangle, setShowUpperTriangle] = useState(false);
@@ -32,6 +33,8 @@ export default function MainContent({ state, onCalculate, calculating, results }
     const handleChartPointClick = (timeSeconds: number, _index: number) => {
         if (videoPlayerRef.current) {
             videoPlayerRef.current.seekTo(timeSeconds);
+            // Scroll the video player into view
+            videoContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     };
 
@@ -82,7 +85,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
 
                 {/* QVHighlights Video Player */}
                 {state.selectedQVQuery && (
-                    <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div ref={videoContainerRef} className="animate-in fade-in slide-in-from-top-4 duration-300">
                         <VideoPlayer
                             ref={videoPlayerRef}
                             query={state.selectedQVQuery}
