@@ -1,9 +1,8 @@
 import { useState } from 'react';
 
-export type SourceType = 'Image' | 'Video' | 'Text' | 'Random';
+export type SourceType = 'Image' | 'Video' | 'Text' | 'Random' | 'DATASET:QVHighlights';
 export type Tab = 'source' | 'general';
 export type TextEmbedType = 'projected' | 'pooler_output';
-export type VideoSubMode = 'Local' | 'QVHighlights';
 
 // Server file reference for files stored on the server
 export interface ServerFileRef {
@@ -48,7 +47,6 @@ export interface AppState {
     videoFps: number;
 
     // QVHighlights
-    videoSubMode: VideoSubMode;
     selectedQVQuery: QVHighlightsQuery | null;
     datasetPath: string;
     videoPath: string;
@@ -78,7 +76,6 @@ export function useAppState() {
     const [videoFps, setVideoFps] = useState<number>(1);
 
     // QVHighlights state
-    const [videoSubMode, setVideoSubMode] = useState<VideoSubMode>('Local');
     const [selectedQVQuery, setSelectedQVQuery] = useState<QVHighlightsQuery | null>(null);
     const [datasetPath, setDatasetPath] = useState<string>('/data1/zhaofanghan/vmr_dataset/data/qvhighlights');
     const [videoPath, setVideoPath] = useState<string>('/data1/zhaofanghan/vmr_dataset/qvhilights_videos');
@@ -118,7 +115,6 @@ export function useAppState() {
         textEmbedTypeB, setTextEmbedTypeB,
         videoFps, setVideoFps,
         // QVHighlights
-        videoSubMode, setVideoSubMode,
         selectedQVQuery, setSelectedQVQuery,
         datasetPath, setDatasetPath,
         videoPath, setVideoPath
@@ -130,7 +126,7 @@ export function useAppState() {
  * Moved from MainContent.tsx for better separation of concerns.
  */
 export function isSourceReady(state: AppState): boolean {
-    const { sourceAType, sourceBType, sourceAText, sourceBText, sourceAFile, sourceBFile } = state;
+    const { sourceAType, sourceBType, sourceAText, sourceBText, sourceAFile, sourceBFile, selectedQVQuery } = state;
 
     // Helper to check if a file source is valid
     const isFileSourceValid = (file: FileSource): boolean => {
@@ -139,6 +135,11 @@ export function isSourceReady(state: AppState): boolean {
         if ('type' in file && file.type === 'server') return true;
         return false;
     };
+
+    // DATASET:QVHighlights mode - only needs query selection
+    if (sourceAType === 'DATASET:QVHighlights' || sourceBType === 'DATASET:QVHighlights') {
+        return selectedQVQuery !== null;
+    }
 
     return (
         (sourceAType !== 'Text' || sourceAText.length > 0) &&

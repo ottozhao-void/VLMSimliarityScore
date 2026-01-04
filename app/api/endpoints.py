@@ -188,7 +188,11 @@ async def predict(
     reparam_sigma_b: float = Form(0.0),
     text_embed_type_a: str = Form("projected"),
     text_embed_type_b: str = Form("projected"),
-    video_fps: int = Form(1)
+    video_fps: int = Form(1),
+    # DATASET:QVHighlights specific fields
+    qv_query: Optional[str] = Form(None),
+    qv_vid: Optional[str] = Form(None),
+    qv_duration: Optional[float] = Form(None)
 ):
     """
     Predict similarity between two sources.
@@ -203,6 +207,60 @@ async def predict(
     temp_files = []
     
     try:
+        # Check for DATASET:QVHighlights source type
+        is_dataset_mode = source_a_type == "DATASET:QVHighlights" or source_b_type == "DATASET:QVHighlights"
+        
+        if is_dataset_mode:
+            # DATASET mode: compute both text-to-video curve AND video self-similarity matrix
+            if not qv_query or not qv_vid:
+                raise HTTPException(status_code=400, detail="QVHighlights query and vid required for DATASET mode")
+            
+            # Get video embeddings
+            video_embeds, video_timestamps, _, temp_v = await VLMService.process_source(
+                source_type="Video",
+                text=None,
+                file=None,
+                server_path=qv_vid,
+                sigma=reparam_sigma_a,
+                text_embed_type="projected",
+                video_fps=video_fps
+            )
+            temp_files.extend(temp_v)
+            
+            # Get text embedding for the query
+            text_embeds, _, _, _ = await VLMService.process_source(
+                source_type="Text",
+                text=qv_query,
+                file=None,
+                server_path=None,
+                sigma=0.0,
+                text_embed_type=text_embed_type_a,
+                video_fps=1
+            )
+            
+            # Compute text-to-video curve
+            _, _, curve, _, best_frame, curve_avg = VLMService.compute_generic_similarity(
+                video_embeds, text_embeds, video_timestamps, None, True, False
+            )
+            
+            # Compute video self-similarity matrix
+            _, _, _, matrix, _, matrix_avg = VLMService.compute_generic_similarity(
+                video_embeds, video_embeds, video_timestamps, video_timestamps, True, True
+            )
+            
+            duration_ms = (time.time() - start_time) * 1000
+            
+            return GenericAnalysisResponse(
+                type="dataset",
+                score=None,
+                curve=curve,
+                matrix=matrix,
+                best_frame=best_frame,
+                average_score=curve_avg,
+                time_taken_ms=duration_ms
+            )
+        
+        # Standard processing for non-dataset mode
         # Process Source A
         embeds_a, timestamps_a, is_video_a, temp_a = await VLMService.process_source(
             source_type=source_a_type,

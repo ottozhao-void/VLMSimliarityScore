@@ -18,6 +18,7 @@ export default function MainContent({ state, results }: MainContentProps) {
 
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [showUpperTriangle, setShowUpperTriangle] = useState(false);
+    const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve'>('curve');
 
     // Get Source A timestamp for annotation line (when a row is selected in matrix mode)
     const sourceATime = useMemo(() => {
@@ -64,6 +65,10 @@ export default function MainContent({ state, results }: MainContentProps) {
     // Extract similarity curve for VideoPlayer overlay
     const similarityCurve = useMemo(() => {
         if (results?.type === 'curve' && results.curve) {
+            return results.curve;
+        }
+        // Also extract curve from dataset type
+        if (results?.type === 'dataset' && results.curve) {
             return results.curve;
         }
         return undefined;
@@ -235,6 +240,74 @@ export default function MainContent({ state, results }: MainContentProps) {
                                 <div className="relative h-64 w-full cursor-pointer">
                                     <canvas ref={chartRef}></canvas>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Dataset Tabbed View (Matrix + Curve) */}
+                        {results.type === 'dataset' && (
+                            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                                {/* Tab Header */}
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="flex p-1 bg-gray-100 rounded-lg">
+                                        <button
+                                            onClick={() => setDatasetActiveTab('curve')}
+                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${datasetActiveTab === 'curve'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            <BarChart3 size={16} />
+                                            Text-to-Video Curve
+                                        </button>
+                                        <button
+                                            onClick={() => setDatasetActiveTab('matrix')}
+                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${datasetActiveTab === 'matrix'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            <Grid size={16} />
+                                            Self-Similarity Matrix
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Curve Tab Content */}
+                                {datasetActiveTab === 'curve' && results.curve && (
+                                    <div className="animate-in fade-in duration-200">
+                                        <p className="text-xs text-gray-400 mb-3">
+                                            <MousePointer2 size={12} className="inline mr-1" />
+                                            Click on any point to seek the video to that timestamp.
+                                        </p>
+                                        <div className="relative h-64 w-full cursor-pointer">
+                                            <canvas ref={chartRef}></canvas>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Matrix Tab Content */}
+                                {datasetActiveTab === 'matrix' && results.matrix && (
+                                    <div className="animate-in fade-in duration-200">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-sm text-gray-500">Video self-similarity heatmap</span>
+                                            {hoverInfo && (
+                                                <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                                                    T(A): {results.matrix.rows_time[hoverInfo.r].toFixed(1)}s,
+                                                    T(B): {results.matrix.cols_time[hoverInfo.c].toFixed(1)}s
+                                                    = <span className="font-bold">{hoverInfo.val.toFixed(3)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="relative w-full flex justify-center bg-gray-50 rounded border border-gray-100 cursor-crosshair">
+                                            <canvas
+                                                ref={heatmapRef}
+                                                onMouseMove={handleHeatmapMove}
+                                                onMouseLeave={handleHeatmapLeave}
+                                                className="max-h-[600px] w-full object-contain"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

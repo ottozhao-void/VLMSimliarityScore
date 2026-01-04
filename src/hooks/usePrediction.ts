@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileSource, ServerFileRef } from './useAppState';
+import { FileSource, ServerFileRef, QVHighlightsQuery } from './useAppState';
 
 export function usePrediction() {
     const [calculating, setCalculating] = useState(false);
@@ -17,7 +17,8 @@ export function usePrediction() {
         reparamSigmaB: number,
         textEmbedTypeA: string,
         textEmbedTypeB: string,
-        videoFps: number
+        videoFps: number,
+        selectedQVQuery?: QVHighlightsQuery | null
     ) => {
         setCalculating(true);
         setError(null);
@@ -46,6 +47,13 @@ export function usePrediction() {
             } else if (sourceBFile instanceof File) {
                 formData.append('source_b_file', sourceBFile);
             }
+        }
+
+        // Handle DATASET:QVHighlights - send query data
+        if (selectedQVQuery && (sourceAType === 'DATASET:QVHighlights' || sourceBType === 'DATASET:QVHighlights')) {
+            formData.append('qv_query', selectedQVQuery.query);
+            formData.append('qv_vid', selectedQVQuery.vid);
+            formData.append('qv_duration', String(selectedQVQuery.duration));
         }
 
         formData.append('reparam_sigma_a', String(reparamSigmaA));

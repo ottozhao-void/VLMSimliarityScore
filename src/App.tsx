@@ -37,7 +37,8 @@ export default function App() {
             sigmaB,
             appState.textEmbedTypeA,
             appState.textEmbedTypeB,
-            appState.videoFps
+            appState.videoFps,
+            appState.selectedQVQuery
         );
     }, [
         appState.useReparamA,
@@ -52,6 +53,7 @@ export default function App() {
         appState.textEmbedTypeA,
         appState.textEmbedTypeB,
         appState.videoFps,
+        appState.selectedQVQuery,
         predict
     ]);
 
