@@ -161,6 +161,7 @@ class VLMService:
         sigma: float,
         text_embed_type: str,
         video_fps: int,
+        server_path: Optional[str] = None,
         batch_size: int = 4
     ) -> Tuple[torch.Tensor, Optional[List[float]], bool, List[str]]:
         """
@@ -173,6 +174,7 @@ class VLMService:
             sigma: Reparameterization sigma
             text_embed_type: "projected" or "pooler_output"
             video_fps: Frames per second for video sampling
+            server_path: Server-side file path (for Video source, alternative to file)
             batch_size: Batch size for video frame processing
             
         Returns:
@@ -197,17 +199,28 @@ class VLMService:
             embeds = VLMService.get_image_embedding(raw_image, sigma=sigma)
         
         elif source_type == "Video":
-            if not file:
-                raise SourceValidationError("Video file required for Video source")
             is_video = True
+            video_path = None
             
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-                content = await file.read()
-                tmp.write(content)
-                tmp_path = tmp.name
-                temp_files.append(tmp_path)
+            # Check for server path first, then uploaded file
+            if server_path:
+                # Import here to avoid circular imports
+                from app.services.video_browser_service import VideoBrowserService
+                resolved_path = VideoBrowserService.get_video_path(server_path)
+                if not resolved_path:
+                    raise SourceValidationError(f"Server video not found: {server_path}")
+                video_path = str(resolved_path)
+            elif file:
+                # Write uploaded file to temp location
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+                    content = await file.read()
+                    tmp.write(content)
+                    video_path = tmp.name
+                    temp_files.append(video_path)
+            else:
+                raise SourceValidationError("Video file or server path required for Video source")
             
-            frames, timestamps = extract_frames(tmp_path, fps=video_fps)
+            frames, timestamps = extract_frames(video_path, fps=video_fps)
             if not frames:
                 raise VideoProcessingError("Could not extract frames from video")
             

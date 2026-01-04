@@ -4,6 +4,16 @@ export type SourceType = 'Image' | 'Video' | 'Text' | 'Random';
 export type Tab = 'source' | 'general';
 export type TextEmbedType = 'projected' | 'pooler_output';
 
+// Server file reference for files stored on the server
+export interface ServerFileRef {
+    type: 'server';
+    path: string;
+    name: string;
+}
+
+// Union type for file sources - can be local File, server reference, or null
+export type FileSource = File | ServerFileRef | null;
+
 // Helper type for source-aware state setters
 export type SourceTypeWithClear = (t: SourceType) => void;
 
@@ -13,8 +23,8 @@ export interface AppState {
     sourceBType: SourceType;
     sourceAText: string;
     sourceBText: string;
-    sourceAFile: File | null;
-    sourceBFile: File | null;
+    sourceAFile: FileSource;
+    sourceBFile: FileSource;
 
     // Model & Settings
     modelPreset: string;
@@ -37,8 +47,8 @@ export function useAppState() {
     const [sourceAText, setSourceAText] = useState<string>('');
     const [sourceBText, setSourceBText] = useState<string>('');
 
-    const [sourceAFile, setSourceAFile] = useState<File | null>(null);
-    const [sourceBFile, setSourceBFile] = useState<File | null>(null);
+    const [sourceAFile, setSourceAFile] = useState<FileSource>(null);
+    const [sourceBFile, setSourceBFile] = useState<FileSource>(null);
 
     const [modelPreset, setModelPreset] = useState<string>('Xenova/clip-vit-base-patch32');
     const [customModelId, setCustomModelId] = useState<string>('');
@@ -94,10 +104,19 @@ export function useAppState() {
  */
 export function isSourceReady(state: AppState): boolean {
     const { sourceAType, sourceBType, sourceAText, sourceBText, sourceAFile, sourceBFile } = state;
+
+    // Helper to check if a file source is valid
+    const isFileSourceValid = (file: FileSource): boolean => {
+        if (!file) return false;
+        if (file instanceof File) return true;
+        if ('type' in file && file.type === 'server') return true;
+        return false;
+    };
+
     return (
         (sourceAType !== 'Text' || sourceAText.length > 0) &&
         (sourceBType !== 'Text' || sourceBText.length > 0) &&
-        (sourceAType !== 'Image' && sourceAType !== 'Video' || sourceAFile !== null) &&
-        (sourceBType !== 'Image' && sourceBType !== 'Video' || sourceBFile !== null)
+        (sourceAType !== 'Image' && sourceAType !== 'Video' || isFileSourceValid(sourceAFile)) &&
+        (sourceBType !== 'Image' && sourceBType !== 'Video' || isFileSourceValid(sourceBFile))
     );
 }

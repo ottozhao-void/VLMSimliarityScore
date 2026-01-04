@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileSource } from './useAppState';
 
 export function usePrediction() {
     const [calculating, setCalculating] = useState(false);
@@ -10,9 +11,8 @@ export function usePrediction() {
         sourceBType: string,
         sourceAText: string,
         sourceBText: string,
-        sourceAFile: File | null,
-
-        sourceBFile: File | null,
+        sourceAFile: FileSource,
+        sourceBFile: FileSource,
         reparamSigmaA: number,
         reparamSigmaB: number,
         textEmbedTypeA: string,
@@ -30,8 +30,23 @@ export function usePrediction() {
         if (sourceAText) formData.append('source_a_text', sourceAText);
         if (sourceBText) formData.append('source_b_text', sourceBText);
 
-        if (sourceAFile) formData.append('source_a_file', sourceAFile);
-        if (sourceBFile) formData.append('source_b_file', sourceBFile);
+        // Handle source A file - check if it's a server reference or local file
+        if (sourceAFile) {
+            if ('type' in sourceAFile && sourceAFile.type === 'server') {
+                formData.append('source_a_server_path', sourceAFile.path);
+            } else if (sourceAFile instanceof File) {
+                formData.append('source_a_file', sourceAFile);
+            }
+        }
+
+        // Handle source B file - check if it's a server reference or local file
+        if (sourceBFile) {
+            if ('type' in sourceBFile && sourceBFile.type === 'server') {
+                formData.append('source_b_server_path', sourceBFile.path);
+            } else if (sourceBFile instanceof File) {
+                formData.append('source_b_file', sourceBFile);
+            }
+        }
 
         formData.append('reparam_sigma_a', String(reparamSigmaA));
         formData.append('reparam_sigma_b', String(reparamSigmaB));

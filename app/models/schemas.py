@@ -30,3 +30,16 @@ class GenericAnalysisResponse(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
 
+
+class VideoFileInfo(BaseModel):
+    """Information about a video file on the server."""
+    name: str
+    size: int
+    path: str
+
+
+class VideoListResponse(BaseModel):
+    """Response for video list endpoint."""
+    videos: List[VideoFileInfo]
+    total: int
+    hasMore: bool

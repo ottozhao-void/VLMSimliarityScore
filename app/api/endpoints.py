@@ -1,11 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from typing import Optional
-from app.models.schemas import LoadModelRequest, GenericAnalysisResponse
+from app.models.schemas import LoadModelRequest, GenericAnalysisResponse, VideoListResponse, VideoFileInfo
 from app.services.vlm_engine import VLMService
+from app.services.video_browser_service import VideoBrowserService
 from app.services.exceptions import SourceValidationError, VideoProcessingError, UnknownSourceTypeError
 from app.core.state import state
 import time
 import os
+import mimetypes
 
 router = APIRouter()
 
@@ -17,6 +20,59 @@ async def load_model(request: LoadModelRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/videos", response_model=VideoListResponse)
+async def list_videos(
+    query: str = Query("", description="Fuzzy search query"),
+    limit: int = Query(50, ge=1, le=100, description="Max results"),
+    offset: int = Query(0, ge=0, description="Results offset")
+):
+    """
+    List video files from the server directory with optional fuzzy search.
+    """
+    try:
+        videos, total, has_more = VideoBrowserService.list_videos(query, limit, offset)
+        return VideoListResponse(
+            videos=[VideoFileInfo(name=v.name, size=v.size, path=v.path) for v in videos],
+            total=total,
+            hasMore=has_more
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list videos: {str(e)}")
+
+
+@router.get("/videos/stream/{filename}")
+async def stream_video(filename: str):
+    """
+    Stream a video file from the server directory.
+    Supports HTTP Range requests for seeking.
+    """
+    video_path = VideoBrowserService.get_video_path(filename)
+    if not video_path:
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    # Determine MIME type
+    mime_type, _ = mimetypes.guess_type(str(video_path))
+    if not mime_type:
+        mime_type = "video/mp4"
+    
+    file_size = video_path.stat().st_size
+    
+    def iter_file():
+        with open(video_path, "rb") as f:
+            while chunk := f.read(65536):  # 64KB chunks
+                yield chunk
+    
+    return StreamingResponse(
+        iter_file(),
+        media_type=mime_type,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size)
+        }
+    )
+
+
 @router.post("/predict", response_model=GenericAnalysisResponse)
 async def predict(
     source_a_type: str = Form(...),
@@ -25,6 +81,8 @@ async def predict(
     source_b_text: Optional[str] = Form(None),
     source_a_file: Optional[UploadFile] = File(None),
     source_b_file: Optional[UploadFile] = File(None),
+    source_a_server_path: Optional[str] = Form(None),
+    source_b_server_path: Optional[str] = Form(None),
     reparam_sigma_a: float = Form(0.0),
     reparam_sigma_b: float = Form(0.0),
     text_embed_type_a: str = Form("projected"),
@@ -49,6 +107,7 @@ async def predict(
             source_type=source_a_type,
             text=source_a_text,
             file=source_a_file,
+            server_path=source_a_server_path,
             sigma=reparam_sigma_a,
             text_embed_type=text_embed_type_a,
             video_fps=video_fps
@@ -60,6 +119,7 @@ async def predict(
             source_type=source_b_type,
             text=source_b_text,
             file=source_b_file,
+            server_path=source_b_server_path,
             sigma=reparam_sigma_b,
             text_embed_type=text_embed_type_b,
             video_fps=video_fps

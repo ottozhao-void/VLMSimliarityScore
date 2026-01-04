@@ -1,6 +1,8 @@
-import { useRef } from 'react';
-import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle } from 'lucide-react';
-import { SourceType, AppState, TextEmbedType } from '../hooks/useAppState';
+import { useRef, useState } from 'react';
+import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Server, HardDrive, Film } from 'lucide-react';
+import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef } from '../hooks/useAppState';
+import ServerFilePicker from './ServerFilePicker';
+import { ServerVideoFile } from '../hooks/useServerVideos';
 
 interface SidebarProps {
     state: AppState & {
@@ -9,8 +11,8 @@ interface SidebarProps {
         setSourceBType: (t: SourceType) => void;
         setSourceAText: (t: string) => void;
         setSourceBText: (t: string) => void;
-        setSourceAFile: (f: File | null) => void;
-        setSourceBFile: (f: File | null) => void;
+        setSourceAFile: (f: FileSource) => void;
+        setSourceBFile: (f: FileSource) => void;
         setModelPreset: (s: string) => void;
         setCustomModelId: (s: string) => void;
         setUseGpu: (b: boolean) => void;
@@ -49,6 +51,13 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
     const fileInputARef = useRef<HTMLInputElement>(null);
     const fileInputBRef = useRef<HTMLInputElement>(null);
 
+    // State for server file picker modal
+    const [pickerTarget, setPickerTarget] = useState<'A' | 'B' | null>(null);
+
+    // State for video source mode (local vs server)
+    const [videoModeA, setVideoModeA] = useState<'local' | 'server'>('local');
+    const [videoModeB, setVideoModeB] = useState<'local' | 'server'>('local');
+
     const handleFileDrop = (
         e: React.DragEvent,
         setType: (t: SourceType) => void,
@@ -76,8 +85,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         setType: (t: SourceType) => void,
         textVal: string,
         setTextVal: (s: string) => void,
-        fileVal: File | null,
-        setFileVal: (f: File | null) => void,
+        fileVal: FileSource,
+        setFileVal: (f: FileSource) => void,
         inputRef: any,
         target: 'A' | 'B',
         useReparam: boolean,
@@ -136,45 +145,112 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             />
                         )}
 
-                        {(type === 'Image' || type === 'Video') && (
-                            <div>
-                                {!fileVal ? (
-                                    <div
-                                        onClick={() => inputRef.current?.click()}
-                                        className="border-2 border-dashed border-gray-200 rounded-lg h-24 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black/20 hover:bg-gray-50 cursor-pointer"
-                                    >
-                                        <input
-                                            type="file"
-                                            ref={inputRef}
-                                            className="hidden"
-                                            accept={type === 'Image' ? "image/*" : "video/*"}
-                                            onChange={(e) => {
-                                                if (e.target.files?.[0]) setFileVal(e.target.files[0]);
-                                            }}
-                                        />
-                                        <div className="flex flex-col items-center gap-1 text-gray-400 group-hover:text-gray-600">
-                                            {type === 'Image' ? <UploadCloud size={18} /> : <Video size={18} />}
-                                            <span className="text-xs font-medium">Upload {type}</span>
+                        {(type === 'Image' || type === 'Video') && (() => {
+                            const videoMode = target === 'A' ? videoModeA : videoModeB;
+                            const setVideoMode = target === 'A' ? setVideoModeA : setVideoModeB;
+                            const isServerFile = fileVal && 'type' in fileVal && fileVal.type === 'server';
+                            const isLocalFile = fileVal instanceof File;
+
+                            return (
+                                <div className="space-y-2">
+                                    {/* Local/Server toggle for Video type */}
+                                    {type === 'Video' && (
+                                        <div className="flex p-0.5 bg-gray-100 rounded-lg">
+                                            <button
+                                                onClick={() => { setVideoMode('local'); setFileVal(null); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${videoMode === 'local'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                    }`}
+                                            >
+                                                <HardDrive size={12} />
+                                                Local
+                                            </button>
+                                            <button
+                                                onClick={() => { setVideoMode('server'); setFileVal(null); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${videoMode === 'server'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                    }`}
+                                            >
+                                                <Server size={12} />
+                                                Server
+                                            </button>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="relative border border-gray-200 bg-gray-50 rounded-lg h-24 flex items-center justify-center overflow-hidden group">
-                                        {type === 'Image' ? (
-                                            <img src={URL.createObjectURL(fileVal)} className="w-full h-full object-contain" alt="Preview" />
-                                        ) : (
-                                            <video src={URL.createObjectURL(fileVal)} className="w-full h-full object-contain" />
-                                        )}
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setFileVal(null); }}
-                                            className="absolute top-1 right-1 p-1 bg-white rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-100"
+                                    )}
+
+                                    {/* File upload/selection area */}
+                                    {!fileVal ? (
+                                        <div
+                                            onClick={() => {
+                                                if (type === 'Video' && videoMode === 'server') {
+                                                    setPickerTarget(target);
+                                                } else {
+                                                    inputRef.current?.click();
+                                                }
+                                            }}
+                                            className="border-2 border-dashed border-gray-200 rounded-lg h-24 flex flex-col items-center justify-center transition-all duration-200 relative overflow-hidden group hover:border-black/20 hover:bg-gray-50 cursor-pointer"
                                         >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                            <input
+                                                type="file"
+                                                ref={inputRef}
+                                                className="hidden"
+                                                accept={type === 'Image' ? "image/*" : "video/*"}
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) setFileVal(e.target.files[0]);
+                                                }}
+                                            />
+                                            <div className="flex flex-col items-center gap-1 text-gray-400 group-hover:text-gray-600">
+                                                {type === 'Video' && videoMode === 'server' ? (
+                                                    <>
+                                                        <Server size={18} />
+                                                        <span className="text-xs font-medium">Browse Server</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {type === 'Image' ? <UploadCloud size={18} /> : <Video size={18} />}
+                                                        <span className="text-xs font-medium">Upload {type}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : isServerFile ? (
+                                        /* Server file selected */
+                                        <div className="relative border border-gray-200 bg-gray-50 rounded-lg h-24 flex items-center justify-center overflow-hidden group">
+                                            <div className="flex flex-col items-center gap-2 text-gray-600 px-4">
+                                                <Film size={24} className="text-gray-400" />
+                                                <span className="text-xs font-medium text-center truncate max-w-full">
+                                                    {(fileVal as ServerFileRef).name}
+                                                </span>
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setFileVal(null); }}
+                                                className="absolute top-1 right-1 p-1 bg-white rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-100"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ) : isLocalFile ? (
+                                        /* Local file selected */
+                                        <div className="relative border border-gray-200 bg-gray-50 rounded-lg h-24 flex items-center justify-center overflow-hidden group">
+                                            {type === 'Image' ? (
+                                                <img src={URL.createObjectURL(fileVal as File)} className="w-full h-full object-contain" alt="Preview" />
+                                            ) : (
+                                                <video src={URL.createObjectURL(fileVal as File)} className="w-full h-full object-contain" />
+                                            )}
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setFileVal(null); }}
+                                                className="absolute top-1 right-1 p-1 bg-white rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-100"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            );
+                        })()}
 
                         {type === 'Random' && (
                             <div className="h-24 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-center text-gray-400">
@@ -229,7 +305,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         );
     };
 
-    return (
+    const sidebarContent = (
         <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full min-h-0 border-r border-gray-200 z-10 shadow-sm bg-[#fafafa] flex flex-col">
             {/* Header */}
             <div className="p-6 pb-4">
@@ -428,5 +504,34 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                 <span>Enhanced UI</span>
             </div>
         </div>
+    );
+
+    // Handler for server file selection
+    const handleServerFileSelect = (file: ServerVideoFile) => {
+        const serverRef: ServerFileRef = {
+            type: 'server',
+            path: file.path,
+            name: file.name
+        };
+
+        if (pickerTarget === 'A') {
+            setSourceAFile(serverRef);
+        } else if (pickerTarget === 'B') {
+            setSourceBFile(serverRef);
+        }
+        setPickerTarget(null);
+    };
+
+    return (
+        <>
+            {sidebarContent}
+
+            {/* Server File Picker Modal */}
+            <ServerFilePicker
+                isOpen={pickerTarget !== null}
+                onClose={() => setPickerTarget(null)}
+                onSelect={handleServerFileSelect}
+            />
+        </>
     );
 }
