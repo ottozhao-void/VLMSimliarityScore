@@ -82,11 +82,11 @@ export default function App() {
                     onLoadModel={handleLoadModel}
                     modelStatus={modelStatus}
                     modelStatusMsg={modelMsg}
+                    onCalculate={handleCalculate}
+                    calculating={calculating}
                 />
                 <MainContent
                     state={appState}
-                    onCalculate={handleCalculate}
-                    calculating={calculating}
                     results={results}
                 />
             </div>

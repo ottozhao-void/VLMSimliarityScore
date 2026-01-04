@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Server, HardDrive, Film, Database, Save, Loader2 } from 'lucide-react';
-import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef, VideoSubMode, QVHighlightsQuery } from '../hooks/useAppState';
+import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Server, HardDrive, Film, Database, Save, Loader2, Play } from 'lucide-react';
+import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef, VideoSubMode, QVHighlightsQuery, isSourceReady } from '../hooks/useAppState';
 import ServerFilePicker from './ServerFilePicker';
 import QVHighlightsQueryPicker from './QVHighlightsQueryPicker';
 import { ServerVideoFile } from '../hooks/useServerVideos';
@@ -33,9 +33,11 @@ interface SidebarProps {
     onLoadModel: () => void;
     modelStatus: 'idle' | 'loading' | 'ready' | 'error';
     modelStatusMsg?: string;
+    onCalculate: () => void;
+    calculating: boolean;
 }
 
-export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMsg }: SidebarProps) {
+export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMsg, onCalculate, calculating }: SidebarProps) {
     const {
         tab, setTab,
         sourceAType, setSourceAType,
@@ -59,6 +61,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         datasetPath, setDatasetPath,
         videoPath, setVideoPath
     } = state;
+
+    const isReady = isSourceReady(state);
 
     const fileInputARef = useRef<HTMLInputElement>(null);
     const fileInputBRef = useRef<HTMLInputElement>(null);
@@ -409,6 +413,28 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                         <span className="text-[10px] font-medium text-gray-500 tracking-wide uppercase">Control Panel</span>
                     </div>
                 </div>
+
+                {/* Calculate Button */}
+                <button
+                    onClick={onCalculate}
+                    disabled={!isReady || calculating}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all shadow-sm mb-4 ${isReady && !calculating
+                            ? 'bg-black text-white hover:bg-gray-800 hover:shadow-md active:scale-95'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                >
+                    {calculating ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <span>Computing...</span>
+                        </>
+                    ) : (
+                        <>
+                            <Play size={16} fill="currentColor" />
+                            <span>Calculate Similarity</span>
+                        </>
+                    )}
+                </button>
 
                 {/* Tabs */}
                 <div className="flex p-1 bg-gray-200/60 rounded-xl">

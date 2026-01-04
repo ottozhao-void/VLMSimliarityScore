@@ -7,12 +7,10 @@ import VideoPlayer, { VideoPlayerHandle } from './VideoPlayer';
 
 interface MainContentProps {
     state: AppState;
-    onCalculate: () => void;
-    calculating: boolean;
     results: any;
 }
 
-export default function MainContent({ state, onCalculate, calculating, results }: MainContentProps) {
+export default function MainContent({ state, results }: MainContentProps) {
     const chartRef = useRef<HTMLCanvasElement | null>(null);
     const heatmapRef = useRef<HTMLCanvasElement | null>(null);
     const videoPlayerRef = useRef<VideoPlayerHandle>(null);
@@ -54,8 +52,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
         showUpperTriangle
     });
 
-    // Use helper function from useAppState
-    const isReady = isSourceReady(state);
+
 
     // Handle heatmap row selection
     const handleHeatmapClick = () => {
@@ -94,29 +91,7 @@ export default function MainContent({ state, onCalculate, calculating, results }
                     </div>
                 )}
 
-                {/* Calculate Button */}
-                <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-                    <button
-                        onClick={onCalculate}
-                        disabled={!isReady || calculating}
-                        className={`flex items-center gap-2 px-8 py-3 rounded-full font-bold text-lg transition-all shadow-lg ${isReady && !calculating
-                            ? 'bg-black text-white hover:bg-gray-800 hover:shadow-xl active:scale-95'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        {calculating ? (
-                            <>
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span>Computing...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Play size={20} fill="currentColor" />
-                                <span>Calculate</span>
-                            </>
-                        )}
-                    </button>
-                </div>
+
 
                 {/* Results Section */}
                 {results && (
