@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import { BarChart3, MousePointer2, ImageIcon } from 'lucide-react';
 import { createSimilarityCurveConfig, extractChartData, ChartClickOptions } from '../utils/chartConfig';

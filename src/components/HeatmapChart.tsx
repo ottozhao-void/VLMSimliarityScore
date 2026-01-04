@@ -1,5 +1,4 @@
-
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, MouseEvent } from 'react';
 import { Grid, MousePointer2 } from 'lucide-react';
 
 export interface HeatmapData {
@@ -85,7 +84,7 @@ export default function HeatmapChart({
     }, [data, selectedRow, showUpperTriangle]);
 
     // Handle Interaction
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
         if (!data || !canvasRef.current) return;
 
         const rect = canvasRef.current.getBoundingClientRect();

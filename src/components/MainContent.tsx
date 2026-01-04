@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo } from 'react';
-import { BarChart3, Clock, Grid, Activity, MousePointer2, ImageIcon } from 'lucide-react';
+import { BarChart3, Clock, Grid, Activity } from 'lucide-react';
 import { AppState } from '../hooks/useAppState';
 import HeatmapChart from './HeatmapChart';
 import SimilarityChart from './SimilarityChart';
@@ -131,7 +131,7 @@ export default function MainContent({ state, results }: MainContentProps) {
                         {/* Visualizations */}
 
                         {/* Matrix Heatmap */}
-                        {results.type === 'matrix' && (
+                        {results.type === 'matrix' && results.matrix && (
                             <HeatmapChart
                                 data={results.matrix}
                                 selectedRow={selectedRow}

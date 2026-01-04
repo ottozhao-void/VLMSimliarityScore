@@ -5,8 +5,8 @@ export interface FrameResult {
 
 export interface SimilarityMatrixCursor {
     matrix: number[][];
-    rows_time?: number[];
-    cols_time?: number[];
+    rows_time: number[];
+    cols_time: number[];
 }
 
 export interface AnalysisResults {

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Settings, ChevronDown, UploadCloud, X, Video, Dice5, Download, Zap, Cpu, CheckCircle2, AlertCircle, Server, HardDrive, Film, Database, Save, Loader2, Play } from 'lucide-react';
+import { Settings, ChevronDown, Download, Zap, Cpu, CheckCircle2, AlertCircle, Database, Save, Loader2, Play } from 'lucide-react';
 import { SourceType, AppState, TextEmbedType, FileSource, ServerFileRef, QVHighlightsQuery, isSourceReady } from '../hooks/useAppState';
 import ServerFilePicker from './ServerFilePicker';
 import QVHighlightsQueryPicker from './QVHighlightsQueryPicker';
@@ -78,26 +78,7 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
     const [editDatasetPath, setEditDatasetPath] = useState(datasetPath);
     const [editVideoPath, setEditVideoPath] = useState(videoPath);
 
-    const handleFileDrop = (
-        e: React.DragEvent,
-        setType: (t: SourceType) => void,
-        setFile: (f: File | null) => void
-    ) => {
-        e.preventDefault();
-        e.stopPropagation();
 
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-
-            if (file.type.startsWith('image/')) {
-                setType('Image');
-                setFile(file);
-            } else if (file.type.startsWith('video/')) {
-                setType('Video');
-                setFile(file);
-            }
-        }
-    };
 
 
 
