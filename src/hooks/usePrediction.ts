@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { FileSource, ServerFileRef, QVHighlightsQuery } from './useAppState';
+import { AnalysisResults } from '../types';
 
 export function usePrediction() {
     const [calculating, setCalculating] = useState(false);
-    const [results, setResults] = useState<any>(null); // Type this properly if possible
+    const [results, setResults] = useState<AnalysisResults | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const predict = async (

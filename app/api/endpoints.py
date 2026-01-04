@@ -13,6 +13,7 @@ from app.services.exceptions import SourceValidationError, VideoProcessingError,
 from app.core.state import state
 import time
 import os
+import tempfile
 import mimetypes
 
 router = APIRouter()
@@ -216,23 +217,22 @@ async def predict(
                 raise HTTPException(status_code=400, detail="QVHighlights query and vid required for DATASET mode")
             
             # Get video embeddings
-            video_embeds, video_timestamps, _, temp_v = await VLMService.process_source(
+            video_embeds, video_timestamps, _ = await VLMService.process_source(
                 source_type="Video",
                 text=None,
-                file=None,
-                server_path=qv_vid,
+                image_bytes=None,
+                video_path=qv_vid,
                 sigma=reparam_sigma_a,
                 text_embed_type="projected",
                 video_fps=video_fps
             )
-            temp_files.extend(temp_v)
             
             # Get text embedding for the query
-            text_embeds, _, _, _ = await VLMService.process_source(
+            text_embeds, _, _ = await VLMService.process_source(
                 source_type="Text",
                 text=qv_query,
-                file=None,
-                server_path=None,
+                image_bytes=None,
+                video_path=None,
                 sigma=0.0,
                 text_embed_type=text_embed_type_a,
                 video_fps=1
@@ -261,29 +261,50 @@ async def predict(
             )
         
         # Standard processing for non-dataset mode
+        
+        # Helper for input preparation
+        async def prepare_input(sType, txt, f, sPath):
+            img_b = None
+            vid_p = None
+            
+            if sType == "Image" and f:
+                img_b = await f.read()
+            elif sType == "Video":
+                if sPath:
+                    vid_p = sPath
+                elif f:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+                        content = await f.read()
+                        tmp.write(content)
+                        vid_p = tmp.name
+                        temp_files.append(vid_p)
+            return img_b, vid_p
+
         # Process Source A
-        embeds_a, timestamps_a, is_video_a, temp_a = await VLMService.process_source(
+        img_bytes_a, vid_path_a = await prepare_input(source_a_type, source_a_text, source_a_file, source_a_server_path)
+        
+        embeds_a, timestamps_a, is_video_a = await VLMService.process_source(
             source_type=source_a_type,
             text=source_a_text,
-            file=source_a_file,
-            server_path=source_a_server_path,
+            image_bytes=img_bytes_a,
+            video_path=vid_path_a,
             sigma=reparam_sigma_a,
             text_embed_type=text_embed_type_a,
             video_fps=video_fps
         )
-        temp_files.extend(temp_a)
         
         # Process Source B
-        embeds_b, timestamps_b, is_video_b, temp_b = await VLMService.process_source(
+        img_bytes_b, vid_path_b = await prepare_input(source_b_type, source_b_text, source_b_file, source_b_server_path)
+        
+        embeds_b, timestamps_b, is_video_b = await VLMService.process_source(
             source_type=source_b_type,
             text=source_b_text,
-            file=source_b_file,
-            server_path=source_b_server_path,
+            image_bytes=img_bytes_b,
+            video_path=vid_path_b,
             sigma=reparam_sigma_b,
             text_embed_type=text_embed_type_b,
             video_fps=video_fps
         )
-        temp_files.extend(temp_b)
         
         # Compute similarity
         res_type, score, curve, matrix, best_frame, avg_score = VLMService.compute_generic_similarity(

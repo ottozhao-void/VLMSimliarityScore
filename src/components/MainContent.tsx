@@ -1,23 +1,22 @@
 import { useRef, useState, useMemo } from 'react';
 import { BarChart3, Clock, Grid, Activity, MousePointer2, ImageIcon } from 'lucide-react';
 import { AppState } from '../hooks/useAppState';
-import { useSimilarityChart } from '../hooks/useSimilarityChart';
-import { useHeatmapChart } from '../hooks/useHeatmapChart';
+import HeatmapChart from './HeatmapChart';
+import SimilarityChart from './SimilarityChart';
 import VideoPlayer, { VideoPlayerHandle } from './VideoPlayer';
+
+import { AnalysisResults } from '../types';
 
 interface MainContentProps {
     state: AppState;
-    results: any;
+    results: AnalysisResults | null;
 }
 
 export default function MainContent({ state, results }: MainContentProps) {
-    const chartRef = useRef<HTMLCanvasElement | null>(null);
-    const heatmapRef = useRef<HTMLCanvasElement | null>(null);
     const videoPlayerRef = useRef<VideoPlayerHandle>(null);
     const videoContainerRef = useRef<HTMLDivElement>(null);
 
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
-    const [showUpperTriangle, setShowUpperTriangle] = useState(false);
     const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve'>('curve');
 
     // Get Source A timestamp for annotation line (when a row is selected in matrix mode)
@@ -37,35 +36,8 @@ export default function MainContent({ state, results }: MainContentProps) {
         }
     };
 
-    // Use extracted hooks for chart logic
-    useSimilarityChart({
-        chartRef,
-        results,
-        selectedRow,
-        onPointClick: handleChartPointClick,
-        sourceATime
-    });
-
     // Determine if heatmap should be visible (for triggering re-render)
-    const isHeatmapVisible = results?.type === 'matrix' ||
-        (results?.type === 'dataset' && datasetActiveTab === 'matrix');
-
-    const { hoverInfo, handleHeatmapMove, handleHeatmapLeave } = useHeatmapChart({
-        heatmapRef,
-        results,
-        selectedRow,
-        showUpperTriangle,
-        isVisible: isHeatmapVisible
-    });
-
-
-
-    // Handle heatmap row selection
-    const handleHeatmapClick = () => {
-        if (hoverInfo) {
-            setSelectedRow(hoverInfo.r);
-        }
-    };
+    // Note: HeatmapChart controls its own rendering efficiency now.
 
     // Extract similarity curve for VideoPlayer overlay
     const similarityCurve = useMemo(() => {
@@ -160,92 +132,21 @@ export default function MainContent({ state, results }: MainContentProps) {
 
                         {/* Matrix Heatmap */}
                         {results.type === 'matrix' && (
-                            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm overflow-hidden">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <Grid size={20} className="text-gray-500" />
-                                        <span className="text-sm font-bold uppercase text-gray-700">Similarity Heatmap</span>
-
-                                        {/* Toggle Button for Upper Triangle */}
-                                        <div className="flex items-center ml-4 gap-2">
-                                            <button
-                                                onClick={() => setShowUpperTriangle(!showUpperTriangle)}
-                                                className={`
-                                                    relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent 
-                                                    transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2
-                                                    ${showUpperTriangle ? 'bg-black' : 'bg-gray-200'}
-                                                `}
-                                            >
-                                                <span
-                                                    className={`
-                                                        pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 
-                                                        transition duration-200 ease-in-out
-                                                        ${showUpperTriangle ? 'translate-x-4' : 'translate-x-0'}
-                                                    `}
-                                                />
-                                            </button>
-                                            <span className="text-xs text-gray-500 cursor-pointer select-none" onClick={() => setShowUpperTriangle(!showUpperTriangle)}>
-                                                Upper Triangle
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {hoverInfo && (
-                                        <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded fade-in">
-                                            T(A): {results.matrix.rows_time[hoverInfo.r].toFixed(1)}s,
-                                            T(B): {results.matrix.cols_time[hoverInfo.c].toFixed(1)}s
-                                            = <span className="font-bold">{hoverInfo.val.toFixed(3)}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="relative w-full flex justify-center bg-gray-50 rounded border border-gray-100 cursor-crosshair">
-                                    <canvas
-                                        ref={heatmapRef}
-                                        onMouseMove={handleHeatmapMove}
-                                        onMouseLeave={handleHeatmapLeave}
-                                        onClick={handleHeatmapClick}
-                                        className="max-h-[600px] w-full object-contain"
-                                    />
-                                </div>
-                                <p className="text-xs text-center text-gray-400 mt-2">
-                                    <MousePointer2 size={12} className="inline mr-1" />
-                                    Click a row to view similarity curve for that Source A frame.
-                                </p>
-                            </div>
+                            <HeatmapChart
+                                data={results.matrix}
+                                selectedRow={selectedRow}
+                                onRowSelect={setSelectedRow}
+                            />
                         )}
 
                         {/* Line Chart with Source A context */}
                         {(results.type === 'curve' || (results.type === 'matrix' && selectedRow !== null)) && (
-                            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <BarChart3 size={20} />
-                                        <span className="text-sm font-bold uppercase text-gray-700">
-                                            {results.type === 'curve' ? 'Similarity Curve' : 'Frame Similarity Detail'}
-                                        </span>
-                                    </div>
-
-                                    {/* Source A Frame Context (for matrix mode) */}
-                                    {results.type === 'matrix' && selectedRow !== null && (
-                                        <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
-                                            <ImageIcon size={14} className="text-blue-500" />
-                                            <span className="text-xs text-blue-700 font-medium">
-                                                Source A @ {results.matrix.rows_time[selectedRow].toFixed(1)}s
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Click instruction */}
-                                <p className="text-xs text-gray-400 mb-3">
-                                    <MousePointer2 size={12} className="inline mr-1" />
-                                    Click on any point to seek the video to that timestamp.
-                                </p>
-
-                                <div className="relative h-64 w-full cursor-pointer">
-                                    <canvas ref={chartRef}></canvas>
-                                </div>
-                            </div>
+                            <SimilarityChart
+                                results={results}
+                                selectedRow={selectedRow}
+                                onPointClick={handleChartPointClick}
+                                sourceATime={sourceATime}
+                            />
                         )}
 
                         {/* Dataset Tabbed View (Matrix + Curve) */}
@@ -280,37 +181,23 @@ export default function MainContent({ state, results }: MainContentProps) {
                                 {/* Curve Tab Content */}
                                 {datasetActiveTab === 'curve' && results.curve && (
                                     <div className="animate-in fade-in duration-200">
-                                        <p className="text-xs text-gray-400 mb-3">
-                                            <MousePointer2 size={12} className="inline mr-1" />
-                                            Click on any point to seek the video to that timestamp.
-                                        </p>
-                                        <div className="relative h-64 w-full cursor-pointer">
-                                            <canvas ref={chartRef}></canvas>
-                                        </div>
+                                        <SimilarityChart
+                                            results={results}
+                                            selectedRow={null}
+                                            onPointClick={handleChartPointClick}
+                                            variant='plain'
+                                        />
                                     </div>
                                 )}
 
                                 {/* Matrix Tab Content */}
                                 {datasetActiveTab === 'matrix' && results.matrix && (
                                     <div className="animate-in fade-in duration-200">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <span className="text-sm text-gray-500">Video self-similarity heatmap</span>
-                                            {hoverInfo && (
-                                                <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
-                                                    T(A): {results.matrix.rows_time[hoverInfo.r].toFixed(1)}s,
-                                                    T(B): {results.matrix.cols_time[hoverInfo.c].toFixed(1)}s
-                                                    = <span className="font-bold">{hoverInfo.val.toFixed(3)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="relative w-full flex justify-center bg-gray-50 rounded border border-gray-100 cursor-crosshair">
-                                            <canvas
-                                                ref={heatmapRef}
-                                                onMouseMove={handleHeatmapMove}
-                                                onMouseLeave={handleHeatmapLeave}
-                                                className="max-h-[600px] w-full object-contain"
-                                            />
-                                        </div>
+                                        <HeatmapChart
+                                            data={results.matrix}
+                                            variant="plain"
+                                        // onRowSelect={setSelectedRow} // Optional: Enable if we want context in dataset mode
+                                        />
                                     </div>
                                 )}
                             </div>

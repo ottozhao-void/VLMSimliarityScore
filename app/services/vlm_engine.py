@@ -8,9 +8,6 @@ import io
 import tempfile
 import os
 from typing import Optional, List, Union, Tuple, Any
-from fastapi import UploadFile
-from app.services.exceptions import SourceValidationError, VideoProcessingError, UnknownSourceTypeError
-import numpy as np
 import torch.distributions as dist
 from app.models.schemas import GenericAnalysisResponse, FrameResult, SimilarityMatrix
 
@@ -157,33 +154,32 @@ class VLMService:
     async def process_source(
         source_type: str,
         text: Optional[str],
-        file: Optional[UploadFile],
+        image_bytes: Optional[bytes],
+        video_path: Optional[str],
         sigma: float,
         text_embed_type: str,
         video_fps: int,
-        server_path: Optional[str] = None,
         batch_size: int = 4
-    ) -> Tuple[torch.Tensor, Optional[List[float]], bool, List[str]]:
+    ) -> Tuple[torch.Tensor, Optional[List[float]], bool]:
         """
         Process any source type and return embeddings.
         
         Args:
             source_type: One of "Text", "Image", "Video", "Random"
             text: Text content (for Text source)
-            file: Uploaded file (for Image/Video source)
+            image_bytes: Raw bytes of image (for Image source)
+            video_path: Path to video file (server path or local temp path) (for Video source)
             sigma: Reparameterization sigma
             text_embed_type: "projected" or "pooler_output"
             video_fps: Frames per second for video sampling
-            server_path: Server-side file path (for Video source, alternative to file)
             batch_size: Batch size for video frame processing
             
         Returns:
-            Tuple of (embeddings, timestamps, is_video, temp_files_to_cleanup)
+            Tuple of (embeddings, timestamps, is_video)
         """
         embeds = None
         timestamps = None
         is_video = False
-        temp_files = []
         
         if source_type == "Text":
             if not text:
@@ -192,41 +188,42 @@ class VLMService:
             embeds = VLMService.get_text_embedding(text, use_pooler_output=use_pooler, sigma=sigma)
         
         elif source_type == "Image":
-            if not file:
-                raise SourceValidationError("Image file required for Image source")
-            content = await file.read()
-            raw_image = Image.open(io.BytesIO(content)).convert("RGB")
+            if not image_bytes:
+                raise SourceValidationError("Image file content required for Image source")
+            raw_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             embeds = VLMService.get_image_embedding(raw_image, sigma=sigma)
         
         elif source_type == "Video":
             is_video = True
-            video_path = None
             
-            # Check for server path first, then uploaded file
-            if server_path:
-                # Import here to avoid circular imports
+            if not video_path:
+                 raise SourceValidationError("Video path required for Video source")
+
+            # Check if it looks like a server path (we might need to resolve it here if endpoints passed a raw server path string,
+            # BUT better design is endpoints resolves it OR we rely on resolve_path helper. 
+            # The previous logic had resolving logic inside. Let's keep resolving logic if it fails to exist? 
+            # Actually, the endpoints should probably pass a valid path. 
+            # BUT previously `server_path` param was passed. Now `video_path` is passed.
+            # If `video_path` is a temp file, it exists. 
+            # If `video_path` is a server path string like "--foo.mp4", it needs resolving.
+            
+            # We can use a helper to check if file exists, if not, try to resolve as server path.
+            final_path = video_path
+            if not os.path.exists(final_path):
+                 # Try to resolve as server path
                 from app.services.video_browser_service import VideoBrowserService
                 from app.services.qvhighlights_service import QVHighlightsService
                 
-                resolved_path = VideoBrowserService.get_video_path(server_path)
+                resolved_path = VideoBrowserService.get_video_path(video_path)
                 if not resolved_path:
                     # Try QVHighlights as fallback (for vid)
-                    resolved_path = QVHighlightsService.get_video_path(server_path)
+                    resolved_path = QVHighlightsService.get_video_path(video_path)
                 
                 if not resolved_path:
-                    raise SourceValidationError(f"Server video not found: {server_path}")
-                video_path = str(resolved_path)
-            elif file:
-                # Write uploaded file to temp location
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-                    content = await file.read()
-                    tmp.write(content)
-                    video_path = tmp.name
-                    temp_files.append(video_path)
-            else:
-                raise SourceValidationError("Video file or server path required for Video source")
+                    raise SourceValidationError(f"Video not found: {video_path}")
+                final_path = str(resolved_path)
             
-            frames, timestamps = extract_frames(video_path, fps=video_fps)
+            frames, timestamps = extract_frames(final_path, fps=video_fps)
             if not frames:
                 raise VideoProcessingError("Could not extract frames from video")
             
@@ -253,7 +250,7 @@ class VLMService:
         else:
             raise UnknownSourceTypeError(f"Unknown source type: {source_type}")
             
-        return embeds, timestamps, is_video, temp_files
+        return embeds, timestamps, is_video
 
     @staticmethod
     def compute_generic_similarity(
