@@ -126,12 +126,25 @@ export function extractChartData(
     }
 
     // Handle dataset type with curve data
-    if (results.type === 'dataset' && results.curve) {
-        return {
-            labels: results.curve.map((f: any) => f.time.toFixed(1) + 's'),
-            scores: results.curve.map((f: any) => f.score),
-            labelTitle: 'Text-to-Video Similarity'
-        };
+    if (results.type === 'dataset') {
+        // If a row is selected in matrix mode inside dataset, show that row's similarity
+        if (selectedRow !== null && results.matrix) {
+            const rowData = results.matrix.matrix[selectedRow];
+            return {
+                labels: results.matrix.cols_time.map((t: number) => t.toFixed(1) + 's'),
+                scores: rowData,
+                labelTitle: `Similarity for Source A at ${results.matrix.rows_time[selectedRow].toFixed(1)}s`
+            };
+        }
+
+        // Otherwise show the global curve
+        if (results.curve) {
+            return {
+                labels: results.curve.map((f: any) => f.time.toFixed(1) + 's'),
+                scores: results.curve.map((f: any) => f.score),
+                labelTitle: 'Text-to-Video Similarity'
+            };
+        }
     }
 
     return null;

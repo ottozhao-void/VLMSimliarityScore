@@ -19,6 +19,11 @@ export default function MainContent({ state, results }: MainContentProps) {
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve'>('curve');
 
+    // Reset selected row when switching tabs or results change
+    useEffect(() => {
+        setSelectedRow(null);
+    }, [datasetActiveTab, results]);
+
     // Get Source A timestamp for annotation line (when a row is selected in matrix mode)
     const sourceATime = useMemo(() => {
         if (results?.type === 'matrix' && selectedRow !== null && results.matrix?.rows_time) {
@@ -192,12 +197,26 @@ export default function MainContent({ state, results }: MainContentProps) {
 
                                 {/* Matrix Tab Content */}
                                 {datasetActiveTab === 'matrix' && results.matrix && (
-                                    <div className="animate-in fade-in duration-200">
+                                    <div className="animate-in fade-in duration-200 space-y-6">
                                         <HeatmapChart
                                             data={results.matrix}
                                             variant="plain"
-                                        // onRowSelect={setSelectedRow} // Optional: Enable if we want context in dataset mode
+                                            selectedRow={selectedRow}
+                                            onRowSelect={setSelectedRow}
                                         />
+
+                                        {/* Detailed Curve for Selected Row */}
+                                        {selectedRow !== null && (
+                                            <div className="animate-in slide-in-from-top-4 duration-300 pt-4 border-t border-gray-100">
+                                                <SimilarityChart
+                                                    results={results}
+                                                    selectedRow={selectedRow}
+                                                    onPointClick={handleChartPointClick}
+                                                    sourceATime={results.matrix.rows_time[selectedRow]}
+                                                    variant="plain"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
