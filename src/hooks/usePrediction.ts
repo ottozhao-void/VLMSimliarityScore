@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileSource } from './useAppState';
+import { FileSource, ServerFileRef } from './useAppState';
 
 export function usePrediction() {
     const [calculating, setCalculating] = useState(false);
