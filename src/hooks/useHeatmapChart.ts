@@ -5,6 +5,7 @@ interface HeatmapParams {
     results: any;
     selectedRow: number | null;
     showUpperTriangle: boolean;
+    isVisible?: boolean;  // Forces re-render when tab becomes visible
 }
 
 interface HoverInfo {
@@ -16,7 +17,7 @@ interface HoverInfo {
 /**
  * Hook for managing heatmap canvas rendering and interactions.
  */
-export function useHeatmapChart({ heatmapRef, results, selectedRow, showUpperTriangle }: HeatmapParams) {
+export function useHeatmapChart({ heatmapRef, results, selectedRow, showUpperTriangle, isVisible = true }: HeatmapParams) {
     const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 
     // Render heatmap when results or settings change
@@ -63,7 +64,7 @@ export function useHeatmapChart({ heatmapRef, results, selectedRow, showUpperTri
                 }
             }
         }
-    }, [results, selectedRow, showUpperTriangle, heatmapRef]);
+    }, [results, selectedRow, showUpperTriangle, heatmapRef, isVisible]);
 
     // Handle mouse move over heatmap
     const handleHeatmapMove = (e: React.MouseEvent) => {

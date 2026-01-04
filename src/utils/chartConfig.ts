@@ -125,5 +125,14 @@ export function extractChartData(
         };
     }
 
+    // Handle dataset type with curve data
+    if (results.type === 'dataset' && results.curve) {
+        return {
+            labels: results.curve.map((f: any) => f.time.toFixed(1) + 's'),
+            scores: results.curve.map((f: any) => f.score),
+            labelTitle: 'Text-to-Video Similarity'
+        };
+    }
+
     return null;
 }

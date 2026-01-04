@@ -46,11 +46,16 @@ export default function MainContent({ state, results }: MainContentProps) {
         sourceATime
     });
 
+    // Determine if heatmap should be visible (for triggering re-render)
+    const isHeatmapVisible = results?.type === 'matrix' ||
+        (results?.type === 'dataset' && datasetActiveTab === 'matrix');
+
     const { hoverInfo, handleHeatmapMove, handleHeatmapLeave } = useHeatmapChart({
         heatmapRef,
         results,
         selectedRow,
-        showUpperTriangle
+        showUpperTriangle,
+        isVisible: isHeatmapVisible
     });
 
 
@@ -252,8 +257,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                         <button
                                             onClick={() => setDatasetActiveTab('curve')}
                                             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${datasetActiveTab === 'curve'
-                                                    ? 'bg-white text-gray-900 shadow-sm'
-                                                    : 'text-gray-500 hover:text-gray-700'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                         >
                                             <BarChart3 size={16} />
@@ -262,8 +267,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                         <button
                                             onClick={() => setDatasetActiveTab('matrix')}
                                             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${datasetActiveTab === 'matrix'
-                                                    ? 'bg-white text-gray-900 shadow-sm'
-                                                    : 'text-gray-500 hover:text-gray-700'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                         >
                                             <Grid size={16} />
