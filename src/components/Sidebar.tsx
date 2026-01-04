@@ -404,37 +404,37 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
         <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full min-h-0 border-r border-gray-200 z-10 shadow-sm bg-[#fafafa] flex flex-col">
             {/* Header */}
             <div className="p-6 pb-4">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2.5 bg-black text-white rounded-xl shadow-lg shadow-black/10 ring-1 ring-black/5">
-                        <Settings data-testid="settings-icon" size={20} />
+                <div className="flex items-center justify-between mb-6 gap-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-black text-white rounded-xl shadow-lg shadow-black/10 ring-1 ring-black/5">
+                            <Settings data-testid="settings-icon" size={20} />
+                        </div>
+                        <div className="hidden sm:block">
+                            <h1 className="text-lg font-bold tracking-tight text-gray-900 leading-none">VLM Scorer</h1>
+                            <span className="text-[10px] font-medium text-gray-500 tracking-wide uppercase">Control Panel</span>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-lg font-bold tracking-tight text-gray-900 leading-none">VLM Scorer</h1>
-                        <span className="text-[10px] font-medium text-gray-500 tracking-wide uppercase">Control Panel</span>
-                    </div>
-                </div>
 
-                {/* Calculate Button */}
-                <button
-                    onClick={onCalculate}
-                    disabled={!isReady || calculating}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all shadow-sm mb-4 ${isReady && !calculating
-                            ? 'bg-black text-white hover:bg-gray-800 hover:shadow-md active:scale-95'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`}
-                >
-                    {calculating ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            <span>Computing...</span>
-                        </>
-                    ) : (
-                        <>
-                            <Play size={16} fill="currentColor" />
-                            <span>Calculate Similarity</span>
-                        </>
-                    )}
-                </button>
+                    {/* Calculate Button */}
+                    <button
+                        onClick={onCalculate}
+                        disabled={!isReady || calculating}
+                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-sm ${isReady && !calculating
+                                ? 'bg-black text-white hover:bg-gray-800 hover:shadow-md active:scale-95'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                        title="Calculate Similarity (Ctrl+Shift+C)"
+                    >
+                        {calculating ? (
+                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <>
+                                <Play size={14} fill="currentColor" />
+                                <span>Calculate</span>
+                            </>
+                        )}
+                    </button>
+                </div>
 
                 {/* Tabs */}
                 <div className="flex p-1 bg-gray-200/60 rounded-xl">
