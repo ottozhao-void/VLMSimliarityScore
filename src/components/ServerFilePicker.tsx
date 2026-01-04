@@ -159,11 +159,11 @@ export default function ServerFilePicker({ isOpen, onClose, onSelect }: ServerFi
                     {videos.map((video, index) => (
                         <div
                             key={video.path}
-                            ref={el => itemRefs.current[index] = el}
+                            ref={el => { itemRefs.current[index] = el }}
                             onClick={() => handleItemClick(video)}
                             className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${index === selectedIndex
-                                    ? 'bg-black text-white'
-                                    : 'hover:bg-gray-50'
+                                ? 'bg-black text-white'
+                                : 'hover:bg-gray-50'
                                 }`}
                         >
                             <Film

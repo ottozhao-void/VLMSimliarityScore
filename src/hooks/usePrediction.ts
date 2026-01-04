@@ -33,7 +33,7 @@ export function usePrediction() {
         // Handle source A file - check if it's a server reference or local file
         if (sourceAFile) {
             if ('type' in sourceAFile && sourceAFile.type === 'server') {
-                formData.append('source_a_server_path', sourceAFile.path);
+                formData.append('source_a_server_path', (sourceAFile as ServerFileRef).path);
             } else if (sourceAFile instanceof File) {
                 formData.append('source_a_file', sourceAFile);
             }
@@ -42,7 +42,7 @@ export function usePrediction() {
         // Handle source B file - check if it's a server reference or local file
         if (sourceBFile) {
             if ('type' in sourceBFile && sourceBFile.type === 'server') {
-                formData.append('source_b_server_path', sourceBFile.path);
+                formData.append('source_b_server_path', (sourceBFile as ServerFileRef).path);
             } else if (sourceBFile instanceof File) {
                 formData.append('source_b_file', sourceBFile);
             }

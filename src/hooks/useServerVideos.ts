@@ -27,7 +27,8 @@ export function useServerVideos(debounceMs: number = 300): UseServerVideosResult
     const [hasMore, setHasMore] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [query, setQuery] = useState('');
+    // query state removed
+
     const [offset, setOffset] = useState(0);
 
     const debounceRef = useRef<number | null>(null);
@@ -76,7 +77,8 @@ export function useServerVideos(debounceMs: number = 300): UseServerVideosResult
             clearTimeout(debounceRef.current);
         }
 
-        setQuery(newQuery);
+        // setQuery(newQuery); // Unused
+
         currentQueryRef.current = newQuery;
 
         // Debounce the actual fetch
@@ -97,7 +99,8 @@ export function useServerVideos(debounceMs: number = 300): UseServerVideosResult
         setTotal(0);
         setHasMore(false);
         setOffset(0);
-        setQuery('');
+        // setQuery(''); // Unused
+
         setError(null);
         currentQueryRef.current = '';
     }, []);
