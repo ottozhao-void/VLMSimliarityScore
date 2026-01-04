@@ -11,8 +11,9 @@ import os
 from dataclasses import dataclass
 from fuzzywuzzy import fuzz
 
-# Configuration
-VIDEO_DIRECTORY = Path("local_test_videos").resolve()
+# Configuration - use environment variable for production, fallback to local for development
+_VIDEO_DIR_DEFAULT = "/data1/zhaofanghan/vmr_dataset/qvhilights_videos"
+VIDEO_DIRECTORY = Path(os.getenv("VIDEO_DIR", _VIDEO_DIR_DEFAULT)).resolve()
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".m4v"}
 
 

@@ -2,4 +2,5 @@
 trigger: always_on
 ---
 
-Current project is developed on Windows OS but deployed on a Linux server. So run terminal commands that is Windows compatible.
+1. The app is deployed running on a Linux server zhaofanghan@10.184.17.30 and does not run on local Windows OS PC
+2. Local is only used for development of the app.
