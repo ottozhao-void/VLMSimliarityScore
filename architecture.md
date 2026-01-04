@@ -45,7 +45,7 @@ The backend is built with **FastAPI** and follows a **Controller-Service** patte
 *   **Responsibilities**: Request validation, parameter parsing, and response formatting using Pydantic schemas.
 
 ### 3. Service Layer (`app/services/`)
-*   **`vlm_engine.py`**: Encapsulates the core VLM logic (e.g., CLIP, SigLIP). Handles model/processor initialization, embedding generation, and similarity calculation.
+*   **`vlm_engine.py`**: Encapsulates the core VLM logic (e.g., CLIP). Handles model/processor initialization, embedding generation, and similarity calculation.
 *   **`video_processing.py`**: Handles video file processing, frame extraction (using OpenCV), and temporal sampling.
 
 ### 4. State Management (`app/core/`)

@@ -42,7 +42,7 @@ Enable users to upload video files and analyze semantic similarity between the v
             ```
 
 **Performance Considerations:**
-- **Batching**: If using GPU, batch frames for inference (e.g., batch size 4 or 8) to speed up CLIP/SigLIP encoding.
+- **Batching**: If using GPU, batch frames for inference (e.g., batch size 4 or 8) to speed up CLIP encoding.
 - **Memory**: Don't load entire video to RAM if large. Process in chunks.
 - **Cleanup**: Delete temp video files after processing.
 

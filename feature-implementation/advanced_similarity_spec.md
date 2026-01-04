@@ -39,7 +39,7 @@ When comparing two videos:
 
 ### 2.4. Text Source Configuration
 When "Text" is selected as a source, a sub-menu must appear to configure the embedding extraction method:
-*   **`text_embeds`** (Default): The standard projected embedding used for CLIP/SigLIP alignment.
+*   **`text_embeds`** (Default): The standard projected embedding used for CLIP alignment.
 *   **`pooler_output`**: The raw output from the text encoder's pooler layer (before the final projection to the joint multimodal space).
 
 ### 2.5. Global Settings: Reparameterization Trick

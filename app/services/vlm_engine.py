@@ -25,8 +25,7 @@ class VLMService:
             device = "cuda" if use_gpu and torch.cuda.is_available() else "cpu"
             
             hf_model_id = model_id
-            # if "Xenova/siglip" in hf_model_id:
-            #     hf_model_id = hf_model_id.replace("Xenova/", "google/")
+
             if "Xenova/clip" in hf_model_id:
                 hf_model_id = hf_model_id.replace("Xenova/", "openai/")
 
