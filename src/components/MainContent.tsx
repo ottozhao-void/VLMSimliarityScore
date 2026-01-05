@@ -190,6 +190,7 @@ export default function MainContent({ state, results }: MainContentProps) {
                                             results={results}
                                             selectedRow={null}
                                             onPointClick={handleChartPointClick}
+                                            relevantWindows={state.selectedQVQuery?.relevant_windows}
                                             variant='plain'
                                         />
                                     </div>

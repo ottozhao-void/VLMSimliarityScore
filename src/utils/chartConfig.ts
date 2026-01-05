@@ -7,6 +7,7 @@ Chart.register(annotationPlugin);
 export interface ChartClickOptions {
     onPointClick?: (index: number, timeLabel: string) => void;
     sourceAAnnotationTime?: number;  // Time in seconds for vertical dotted line
+    relevantWindows?: number[][];    // Array of [start, end] time pairs for relevant windows
 }
 
 /**
@@ -19,22 +20,31 @@ export function createSimilarityCurveConfig(
     labelTitle: string,
     options?: ChartClickOptions
 ): ChartConfiguration<'line'> {
-    const { onPointClick, sourceAAnnotationTime } = options || {};
+    const { onPointClick, sourceAAnnotationTime, relevantWindows } = options || {};
 
-    // Build annotation config if sourceAAnnotationTime is provided
-    const annotationConfig: any = {};
-    if (sourceAAnnotationTime !== undefined) {
-        // Find the closest label index for the annotation
-        const timeLabels = labels.map(l => parseFloat(l.replace('s', '')));
-        let annotationIndex = 0;
-        let minDiff = Math.abs(timeLabels[0] - sourceAAnnotationTime);
+    // Parse time labels once for index finding
+    const timeLabels = labels.map(l => parseFloat(l.replace('s', '')));
+
+    // Helper function to find closest label index for a given time
+    const findClosestIndex = (targetTime: number): number => {
+        let closestIndex = 0;
+        let minDiff = Math.abs(timeLabels[0] - targetTime);
         for (let i = 1; i < timeLabels.length; i++) {
-            const diff = Math.abs(timeLabels[i] - sourceAAnnotationTime);
+            const diff = Math.abs(timeLabels[i] - targetTime);
             if (diff < minDiff) {
                 minDiff = diff;
-                annotationIndex = i;
+                closestIndex = i;
             }
         }
+        return closestIndex;
+    };
+
+    // Build annotation config
+    const annotationConfig: any = {};
+
+    // Add sourceA annotation line if provided
+    if (sourceAAnnotationTime !== undefined) {
+        const annotationIndex = findClosestIndex(sourceAAnnotationTime);
 
         annotationConfig.sourceALine = {
             type: 'line',
@@ -53,6 +63,51 @@ export function createSimilarityCurveConfig(
             }
         };
     }
+
+    // Add relevant windows annotation lines (dashed lines for start/end boundaries)
+    if (relevantWindows && relevantWindows.length > 0) {
+        relevantWindows.forEach(([start, end], windowIndex) => {
+            const startIndex = findClosestIndex(start);
+            const endIndex = findClosestIndex(end);
+
+            // Start boundary line
+            annotationConfig[`relevantWindowStart${windowIndex}`] = {
+                type: 'line',
+                xMin: startIndex,
+                xMax: startIndex,
+                borderColor: 'rgba(59, 130, 246, 0.7)',  // Blue color
+                borderWidth: 2,
+                borderDash: [6, 4],  // Dashed line
+                label: {
+                    display: windowIndex === 0,  // Only show label on first window
+                    content: `Start: ${start.toFixed(1)}s`,
+                    position: 'start',
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    color: 'white',
+                    font: { size: 9 }
+                }
+            };
+
+            // End boundary line
+            annotationConfig[`relevantWindowEnd${windowIndex}`] = {
+                type: 'line',
+                xMin: endIndex,
+                xMax: endIndex,
+                borderColor: 'rgba(59, 130, 246, 0.7)',  // Blue color
+                borderWidth: 2,
+                borderDash: [6, 4],  // Dashed line
+                label: {
+                    display: windowIndex === 0,  // Only show label on first window
+                    content: `End: ${end.toFixed(1)}s`,
+                    position: 'start',
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    color: 'white',
+                    font: { size: 9 }
+                }
+            };
+        });
+    }
+
 
     return {
         type: 'line',

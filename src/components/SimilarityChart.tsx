@@ -8,6 +8,7 @@ export interface SimilarityChartProps {
     selectedRow: number | null;
     onPointClick?: (timeSeconds: number, index: number) => void;
     sourceATime?: number;
+    relevantWindows?: number[][];  // Array of [start, end] time pairs for relevant windows
     className?: string;
     variant?: 'card' | 'plain';
 }
@@ -17,6 +18,7 @@ export default function SimilarityChart({
     selectedRow,
     onPointClick,
     sourceATime,
+    relevantWindows,
     className = "",
     variant = 'card'
 }: SimilarityChartProps) {
@@ -55,6 +57,10 @@ export default function SimilarityChart({
                         chartOptions.sourceAAnnotationTime = sourceATime;
                     }
 
+                    if (relevantWindows && relevantWindows.length > 0) {
+                        chartOptions.relevantWindows = relevantWindows;
+                    }
+
                     const config = createSimilarityCurveConfig(
                         chartData.labels,
                         chartData.scores,
@@ -72,7 +78,7 @@ export default function SimilarityChart({
                 chartInstance.current = null;
             }
         };
-    }, [results, selectedRow, onPointClick, sourceATime]);
+    }, [results, selectedRow, onPointClick, sourceATime, relevantWindows]);
 
     // Determine Title based on type
     const title = results?.type === 'curve' ? 'Similarity Curve' : 'Frame Similarity Detail';
