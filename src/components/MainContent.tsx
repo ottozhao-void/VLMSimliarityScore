@@ -1,12 +1,13 @@
 import { useRef, useState, useMemo, useEffect } from 'react';
-import { BarChart3, Clock, Grid, Activity, Copy, Check } from 'lucide-react';
+import { BarChart3, Clock, Grid, Activity, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppState } from '../hooks/useAppState';
 import HeatmapChart from './HeatmapChart';
 import SimilarityChart from './SimilarityChart';
 import VideoPlayer, { VideoPlayerHandle } from './VideoPlayer';
+import { ALGORITHMS, AlgorithmId, applyAlgorithm } from '../utils/postProcessing';
 
-import { AnalysisResults } from '../types';
+import { AnalysisResults, FrameResult } from '../types';
 
 interface MainContentProps {
     state: AppState;
@@ -22,16 +23,42 @@ export default function MainContent({ state, results }: MainContentProps) {
 
     const [isCopied, setIsCopied] = useState(false);
 
+    // Post-processing state
+    const [selectedAlgorithm, setSelectedAlgorithm] = useState<AlgorithmId>('raw');
+    const [processedCurve, setProcessedCurve] = useState<FrameResult[] | null>(null);
+
+    // Reset processed curve when results change
+    useEffect(() => {
+        setProcessedCurve(null);
+        setSelectedAlgorithm('raw');
+    }, [results]);
+
+    // Apply post-processing algorithm
+    const handleApplyAlgorithm = () => {
+        if (!results?.curve || results.curve.length === 0) {
+            toast.error('No curve data to process');
+            return;
+        }
+        const processed = applyAlgorithm(selectedAlgorithm, results.curve);
+        setProcessedCurve(processed);
+        toast.success(`Applied ${ALGORITHMS.find(a => a.id === selectedAlgorithm)?.label} algorithm`);
+    };
+
+    // Get the curve data to display (processed or original)
+    const displayCurve = useMemo(() => {
+        return processedCurve ?? results?.curve ?? null;
+    }, [processedCurve, results?.curve]);
+
     // Handle copy similarity values to clipboard
     const handleCopySimilarityValues = () => {
         console.log('Copy button clicked', { results });
 
-        if (!results?.curve || results.curve.length === 0) {
+        const curve = displayCurve;
+        if (!curve || curve.length === 0) {
             toast.error('No similarity data to copy');
             return;
         }
 
-        const curve = results.curve;
         const lines = curve.map((frame) => {
             return `${frame.time.toFixed(1)}s\t${frame.score.toFixed(6)}`;
         });
@@ -231,19 +258,29 @@ export default function MainContent({ state, results }: MainContentProps) {
                                         </button>
                                     </div>
 
-                                    {/* Copy Button (only show for curve tab) */}
+                                    {/* Post-Processing Algorithm Selector (only show for curve tab) */}
                                     {datasetActiveTab === 'curve' && results.curve && (
-                                        <button
-                                            onClick={handleCopySimilarityValues}
-                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-all ${isCopied
-                                                ? 'bg-green-50 text-green-600 border-green-200'
-                                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                                                }`}
-                                            title="Copy similarity values to clipboard"
-                                        >
-                                            {isCopied ? <Check size={16} /> : <Copy size={16} />}
-                                            {isCopied ? 'Copied!' : 'Copy'}
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={selectedAlgorithm}
+                                                onChange={(e) => setSelectedAlgorithm(e.target.value as AlgorithmId)}
+                                                className="px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            >
+                                                {ALGORITHMS.map((algo) => (
+                                                    <option key={algo.id} value={algo.id}>
+                                                        {algo.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={handleApplyAlgorithm}
+                                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-sm"
+                                                title="Apply post-processing algorithm"
+                                            >
+                                                <Play size={14} />
+                                                Apply
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
@@ -251,11 +288,14 @@ export default function MainContent({ state, results }: MainContentProps) {
                                 {datasetActiveTab === 'curve' && results.curve && (
                                     <div className="animate-in fade-in duration-200">
                                         <SimilarityChart
-                                            results={results}
+                                            results={displayCurve ? { ...results, curve: displayCurve } : results}
                                             selectedRow={null}
                                             onPointClick={handleChartPointClick}
                                             relevantWindows={state.selectedQVQuery?.relevant_windows}
                                             variant='plain'
+                                            showCopyButton={true}
+                                            isCopied={isCopied}
+                                            onCopy={handleCopySimilarityValues}
                                         />
                                     </div>
                                 )}

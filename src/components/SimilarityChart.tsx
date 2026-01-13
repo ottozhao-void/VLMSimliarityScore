@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
-import { BarChart3, MousePointer2, ImageIcon } from 'lucide-react';
+import { BarChart3, MousePointer2, ImageIcon, Copy, Check } from 'lucide-react';
 import { createSimilarityCurveConfig, extractChartData, ChartClickOptions } from '../utils/chartConfig';
 
 export interface SimilarityChartProps {
@@ -11,6 +11,10 @@ export interface SimilarityChartProps {
     relevantWindows?: number[][];  // Array of [start, end] time pairs for relevant windows
     className?: string;
     variant?: 'card' | 'plain';
+    // Copy button props (optional, renders in chart top-right when provided)
+    showCopyButton?: boolean;
+    isCopied?: boolean;
+    onCopy?: () => void;
 }
 
 export default function SimilarityChart({
@@ -20,7 +24,10 @@ export default function SimilarityChart({
     sourceATime,
     relevantWindows,
     className = "",
-    variant = 'card'
+    variant = 'card',
+    showCopyButton = false,
+    isCopied = false,
+    onCopy
 }: SimilarityChartProps) {
     const chartRef = useRef<HTMLCanvasElement | null>(null);
     const chartInstance = useRef<Chart | null>(null);
@@ -120,6 +127,20 @@ export default function SimilarityChart({
             </p>
 
             <div className="relative h-64 w-full cursor-pointer">
+                {/* Copy Button - top-right of chart */}
+                {showCopyButton && onCopy && (
+                    <button
+                        onClick={onCopy}
+                        className={`absolute top-0 right-0 z-10 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${isCopied
+                            ? 'bg-green-50 text-green-600 border-green-200'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm'
+                            }`}
+                        title="Copy similarity values to clipboard"
+                    >
+                        {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                        {isCopied ? 'Copied!' : 'Copy'}
+                    </button>
+                )}
                 <canvas ref={chartRef}></canvas>
             </div>
         </div>
