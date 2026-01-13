@@ -24,15 +24,14 @@ export default function MainContent({ state, results }: MainContentProps) {
 
     // Handle copy similarity values to clipboard
     const handleCopySimilarityValues = () => {
-        if (!results?.curve?.scores) {
+        if (!results?.curve || results.curve.length === 0) {
             toast.error('No similarity data to copy');
             return;
         }
 
-        const { scores, time_labels } = results.curve;
-        const lines = scores.map((score: number, index: number) => {
-            const time = time_labels?.[index] ?? `${index * (results.curve.fps ? 1 / results.curve.fps : 1)}s`;
-            return `${time}\t${score.toFixed(6)}`;
+        const curve = results.curve;
+        const lines = curve.map((frame) => {
+            return `${frame.time.toFixed(1)}s\t${frame.score.toFixed(6)}`;
         });
 
         const header = 'Time\tSimilarity Score';
@@ -215,8 +214,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                         <button
                                             onClick={handleCopySimilarityValues}
                                             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-all ${isCopied
-                                                    ? 'bg-green-50 text-green-600 border-green-200'
-                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                                ? 'bg-green-50 text-green-600 border-green-200'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                                                 }`}
                                             title="Copy similarity values to clipboard"
                                         >
