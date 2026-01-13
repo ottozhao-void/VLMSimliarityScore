@@ -24,6 +24,8 @@ export default function MainContent({ state, results }: MainContentProps) {
 
     // Handle copy similarity values to clipboard
     const handleCopySimilarityValues = () => {
+        console.log('Copy button clicked', { results });
+
         if (!results?.curve || results.curve.length === 0) {
             toast.error('No similarity data to copy');
             return;
@@ -37,11 +39,31 @@ export default function MainContent({ state, results }: MainContentProps) {
         const header = 'Time\tSimilarity Score';
         const text = [header, ...lines].join('\n');
 
-        navigator.clipboard.writeText(text).then(() => {
+        // Use Clipboard API if available, otherwise fallback to execCommand
+        const copyToClipboard = async (content: string) => {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(content);
+            } else {
+                // Fallback for non-HTTPS environments
+                const textArea = document.createElement('textarea');
+                textArea.value = content;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                textArea.remove();
+            }
+        };
+
+        copyToClipboard(text).then(() => {
             setIsCopied(true);
             toast.success('Similarity values copied to clipboard');
             setTimeout(() => setIsCopied(false), 2000);
-        }).catch(() => {
+        }).catch((err) => {
+            console.error('Copy failed:', err);
             toast.error('Failed to copy to clipboard');
         });
     };
