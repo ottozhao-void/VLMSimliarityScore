@@ -1,5 +1,6 @@
 import { useRef, useState, useMemo, useEffect } from 'react';
-import { BarChart3, Clock, Grid, Activity } from 'lucide-react';
+import { BarChart3, Clock, Grid, Activity, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppState } from '../hooks/useAppState';
 import HeatmapChart from './HeatmapChart';
 import SimilarityChart from './SimilarityChart';
@@ -18,6 +19,33 @@ export default function MainContent({ state, results }: MainContentProps) {
 
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve'>('curve');
+
+    const [isCopied, setIsCopied] = useState(false);
+
+    // Handle copy similarity values to clipboard
+    const handleCopySimilarityValues = () => {
+        if (!results?.curve?.scores) {
+            toast.error('No similarity data to copy');
+            return;
+        }
+
+        const { scores, time_labels } = results.curve;
+        const lines = scores.map((score: number, index: number) => {
+            const time = time_labels?.[index] ?? `${index * (results.curve.fps ? 1 / results.curve.fps : 1)}s`;
+            return `${time}\t${score.toFixed(6)}`;
+        });
+
+        const header = 'Time\tSimilarity Score';
+        const text = [header, ...lines].join('\n');
+
+        navigator.clipboard.writeText(text).then(() => {
+            setIsCopied(true);
+            toast.success('Similarity values copied to clipboard');
+            setTimeout(() => setIsCopied(false), 2000);
+        }).catch(() => {
+            toast.error('Failed to copy to clipboard');
+        });
+    };
 
     // Reset selected row when switching tabs or results change
     useEffect(() => {
@@ -158,7 +186,7 @@ export default function MainContent({ state, results }: MainContentProps) {
                         {results.type === 'dataset' && (
                             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                                 {/* Tab Header */}
-                                <div className="flex items-center gap-4 mb-6">
+                                <div className="flex items-center justify-between mb-6">
                                     <div className="flex p-1 bg-gray-100 rounded-lg">
                                         <button
                                             onClick={() => setDatasetActiveTab('curve')}
@@ -181,6 +209,21 @@ export default function MainContent({ state, results }: MainContentProps) {
                                             Self-Similarity Matrix
                                         </button>
                                     </div>
+
+                                    {/* Copy Button (only show for curve tab) */}
+                                    {datasetActiveTab === 'curve' && results.curve && (
+                                        <button
+                                            onClick={handleCopySimilarityValues}
+                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-all ${isCopied
+                                                    ? 'bg-green-50 text-green-600 border-green-200'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                                }`}
+                                            title="Copy similarity values to clipboard"
+                                        >
+                                            {isCopied ? <Check size={16} /> : <Copy size={16} />}
+                                            {isCopied ? 'Copied!' : 'Copy'}
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Curve Tab Content */}
