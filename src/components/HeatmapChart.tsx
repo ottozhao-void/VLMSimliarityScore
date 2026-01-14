@@ -290,8 +290,7 @@ export default function HeatmapChart({
             const cellW = rect.width / renderCols;
             const cellH = rect.height / renderRows;
 
-            const r1Rel = Math.floor(y1 / cellH);
-            const r2Rel = Math.floor(y2 / cellH);
+
             const c1Rel = Math.floor(x1 / cellW);
             const c2Rel = Math.floor(x2 / cellW);
 
