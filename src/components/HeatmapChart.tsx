@@ -264,7 +264,7 @@ export default function HeatmapChart({
             // Recalculate dimension maps to map pixels -> time
             const totalRows = data.matrix.length;
             const totalCols = data.matrix[0].length;
-            let rowStart = 0, rowEnd = totalRows, colStart = 0, colEnd = totalCols;
+            let colStart = 0, colEnd = totalCols;
 
             if (zoomRange) {
                 const findIdx = (times: number[], t: number) => {
@@ -275,22 +275,20 @@ export default function HeatmapChart({
                     }
                     return idx;
                 };
-                rowStart = findIdx(data.rows_time, zoomRange.min);
-                rowEnd = findIdx(data.rows_time, zoomRange.max) + 1;
+
                 colStart = findIdx(data.cols_time, zoomRange.min);
                 colEnd = findIdx(data.cols_time, zoomRange.max) + 1;
 
-                rowStart = Math.max(0, rowStart); rowEnd = Math.min(totalRows, rowEnd);
                 colStart = Math.max(0, colStart); colEnd = Math.min(totalCols, colEnd);
             }
 
-            const renderRows = Math.max(1, rowEnd - rowStart);
+
             const renderCols = Math.max(1, colEnd - colStart);
 
+
+
+
             const cellW = rect.width / renderCols;
-            const cellH = rect.height / renderRows;
-
-
             const c1Rel = Math.floor(x1 / cellW);
             const c2Rel = Math.floor(x2 / cellW);
 
