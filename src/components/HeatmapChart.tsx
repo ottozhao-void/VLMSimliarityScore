@@ -296,8 +296,7 @@ export default function HeatmapChart({
             const c2Rel = Math.floor(x2 / cellW);
 
             // Map to global indices
-            const rStartGlobal = Math.max(0, rowStart + r1Rel);
-            const rEndGlobal = Math.min(totalRows - 1, rowStart + r2Rel);
+
             const cStartGlobal = Math.max(0, colStart + c1Rel);
             const cEndGlobal = Math.min(totalCols - 1, colStart + c2Rel);
 
