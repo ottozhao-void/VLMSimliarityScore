@@ -6,6 +6,8 @@ import HeatmapChart from './HeatmapChart';
 import SimilarityChart from './SimilarityChart';
 import VideoPlayer, { VideoPlayerHandle } from './VideoPlayer';
 import { ALGORITHMS, AlgorithmId, applyAlgorithm } from '../utils/postProcessing';
+import { useSegmentMatrices } from '../hooks/useSegmentMatrices';
+import { BoxSelect, GitFork } from 'lucide-react';
 
 import { AnalysisResults, FrameResult } from '../types';
 
@@ -19,7 +21,7 @@ export default function MainContent({ state, results }: MainContentProps) {
     const videoContainerRef = useRef<HTMLDivElement>(null);
 
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
-    const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve'>('curve');
+    const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve' | 'cross-sim' | 'giou'>('curve');
 
     const [isCopied, setIsCopied] = useState(false);
 
@@ -48,6 +50,8 @@ export default function MainContent({ state, results }: MainContentProps) {
     const displayCurve = useMemo(() => {
         return processedCurve ?? results?.curve ?? null;
     }, [processedCurve, results?.curve]);
+
+    const { crossSim, giou } = useSegmentMatrices(displayCurve, state.selectedQVQuery?.relevant_windows);
 
     // Handle copy similarity values to clipboard
     const handleCopySimilarityValues = () => {
@@ -235,10 +239,10 @@ export default function MainContent({ state, results }: MainContentProps) {
                             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                                 {/* Tab Header */}
                                 <div className="flex items-center justify-between mb-6">
-                                    <div className="flex p-1 bg-gray-100 rounded-lg">
+                                    <div className="flex p-1 bg-gray-100 rounded-lg overflow-x-auto">
                                         <button
                                             onClick={() => setDatasetActiveTab('curve')}
-                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${datasetActiveTab === 'curve'
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${datasetActiveTab === 'curve'
                                                 ? 'bg-white text-gray-900 shadow-sm'
                                                 : 'text-gray-500 hover:text-gray-700'
                                                 }`}
@@ -248,13 +252,35 @@ export default function MainContent({ state, results }: MainContentProps) {
                                         </button>
                                         <button
                                             onClick={() => setDatasetActiveTab('matrix')}
-                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${datasetActiveTab === 'matrix'
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${datasetActiveTab === 'matrix'
                                                 ? 'bg-white text-gray-900 shadow-sm'
                                                 : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                         >
                                             <Grid size={16} />
-                                            Self-Similarity Matrix
+                                            Self-Similarity
+                                        </button>
+                                        <button
+                                            onClick={() => setDatasetActiveTab('cross-sim')}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${datasetActiveTab === 'cross-sim'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            <GitFork size={16} />
+                                            Cross-Similarity
+                                        </button>
+                                        <button
+                                            onClick={() => setDatasetActiveTab('giou')}
+                                            disabled={!giou}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${datasetActiveTab === 'giou'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                                } ${!giou ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            title={!giou ? "No Ground Truth segments available" : ""}
+                                        >
+                                            <BoxSelect size={16} />
+                                            GIoU Matrix
                                         </button>
                                     </div>
 
@@ -322,6 +348,36 @@ export default function MainContent({ state, results }: MainContentProps) {
                                                 />
                                             </div>
                                         )}
+                                    </div>
+                                )}
+
+                                {/* Cross-Similarity Tab Content */}
+                                {datasetActiveTab === 'cross-sim' && crossSim && (
+                                    <div className="animate-in fade-in duration-200 space-y-6">
+                                        <HeatmapChart
+                                            data={crossSim}
+                                            variant="plain"
+                                            selectedRow={selectedRow}
+                                            onRowSelect={setSelectedRow}
+                                        />
+                                        <p className="text-sm text-gray-500 text-center">
+                                            Row: Start Frame, Col: End Frame. Value: Average Text-Video Similarity.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* GIoU Tab Content */}
+                                {datasetActiveTab === 'giou' && giou && (
+                                    <div className="animate-in fade-in duration-200 space-y-6">
+                                        <HeatmapChart
+                                            data={giou}
+                                            variant="plain"
+                                            selectedRow={selectedRow}
+                                            onRowSelect={setSelectedRow}
+                                        />
+                                        <p className="text-sm text-gray-500 text-center">
+                                            Row: Start Frame, Col: End Frame. Value: GIoU with Ground Truth.
+                                        </p>
                                     </div>
                                 )}
                             </div>

@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, MouseEvent } from 'react';
 import { Grid, MousePointer2 } from 'lucide-react';
 
 export interface HeatmapData {
-    matrix: number[][];
+    matrix: (number | null)[][];
     rows_time: number[];
     cols_time: number[];
 }
@@ -68,6 +68,9 @@ export default function HeatmapChart({
                 if (showUpperTriangle && i > j) continue;
 
                 const val = matrix[i][j];
+                // Skip if value is null (e.g. for Cross-Sim or GIoU matrices)
+                if (val === null) continue;
+
                 const norm = (val + 1) / 2;
                 const hue = (1 - norm) * 240;
                 ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
