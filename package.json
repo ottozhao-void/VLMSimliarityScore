@@ -21,6 +21,7 @@
     "dependencies": {
         "chart.js": "^4.4.1",
         "chartjs-plugin-annotation": "^3.1.0",
+        "chartjs-plugin-zoom": "^2.2.0",
         "lucide": "^0.321.0",
         "lucide-react": "^0.562.0",
         "react": "^19.2.3",

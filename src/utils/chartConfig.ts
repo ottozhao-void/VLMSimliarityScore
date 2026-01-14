@@ -1,13 +1,15 @@
 import { ChartConfiguration, Chart } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import zoomPlugin from 'chartjs-plugin-zoom';
 
-// Register the annotation plugin
-Chart.register(annotationPlugin);
+// Register the plugins
+Chart.register(annotationPlugin, zoomPlugin);
 
 export interface ChartClickOptions {
     onPointClick?: (index: number, timeLabel: string) => void;
     sourceAAnnotationTime?: number;  // Time in seconds for vertical dotted line
     relevantWindows?: number[][];    // Array of [start, end] time pairs for relevant windows
+    onZoomComplete?: (min: number, max: number) => void;
 }
 
 /**
@@ -20,9 +22,9 @@ export function createSimilarityCurveConfig(
     labelTitle: string,
     options?: ChartClickOptions
 ): ChartConfiguration<'line'> {
-    const { onPointClick, sourceAAnnotationTime, relevantWindows } = options || {};
+    const { onPointClick, sourceAAnnotationTime, relevantWindows, onZoomComplete } = options || {};
 
-    // Parse time labels once for index finding
+    // Parse time labels once for index finding (and zoom mapping)
     const timeLabels = labels.map(l => parseFloat(l.replace('s', '')));
 
     // Helper function to find closest label index for a given time
@@ -139,6 +141,42 @@ export function createSimilarityCurveConfig(
                 legend: { display: true },
                 annotation: {
                     annotations: annotationConfig
+                },
+                zoom: {
+                    pan: {
+                        enabled: false, // Pan handled via zoom state in parent or just drag to zoom
+                        mode: 'x',
+                    },
+                    zoom: {
+                        drag: {
+                            enabled: true,
+                            backgroundColor: 'rgba(54, 162, 235, 0.3)',
+                            borderColor: 'rgba(54, 162, 235, 0.8)',
+                            borderWidth: 1,
+                            threshold: 10
+                        },
+                        mode: 'x',
+                        onZoomComplete: ({ chart }) => {
+                            if (onZoomComplete) {
+                                const { min, max } = chart.scales.x;
+                                // Convert logical indices (Chart.js lines) to time labels
+                                // If scale is category (labels), min/max are indices
+                                // If scale is linear, they are values.
+                                // Here we use category scale with labels like "0.0s", "0.5s".
+                                // Chart.js zoom on category scale returns indices or values depending on config.
+                                // By default for category, it limits the index range.
+
+                                // Caution: Chart.js plugin zoom returns numeric values for category scales which correspond to indices.
+                                const minIndex = Math.round(min);
+                                const maxIndex = Math.round(max);
+
+                                const startTime = timeLabels[Math.max(0, minIndex)];
+                                const endTime = timeLabels[Math.min(timeLabels.length - 1, maxIndex)];
+
+                                onZoomComplete(startTime, endTime);
+                            }
+                        }
+                    }
                 }
             },
             scales: {

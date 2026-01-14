@@ -23,6 +23,9 @@ export default function MainContent({ state, results }: MainContentProps) {
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [datasetActiveTab, setDatasetActiveTab] = useState<'matrix' | 'curve' | 'cross-sim' | 'giou'>('curve');
 
+    // Zoom state (time range in seconds)
+    const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
+
     const [isCopied, setIsCopied] = useState(false);
 
     // Post-processing state
@@ -231,6 +234,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                 selectedRow={selectedRow}
                                 onPointClick={handleChartPointClick}
                                 sourceATime={sourceATime}
+                                zoomRange={zoomRange}
+                                onZoom={setZoomRange}
                             />
                         )}
 
@@ -334,6 +339,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                             variant="plain"
                                             selectedRow={selectedRow}
                                             onRowSelect={setSelectedRow}
+                                            zoomRange={zoomRange}
+                                            onZoom={setZoomRange}
                                         />
 
                                         {/* Detailed Curve for Selected Row */}
@@ -345,6 +352,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                                     onPointClick={handleChartPointClick}
                                                     sourceATime={results.matrix.rows_time[selectedRow]}
                                                     variant="plain"
+                                                    zoomRange={zoomRange}
+                                                    onZoom={setZoomRange}
                                                 />
                                             </div>
                                         )}
@@ -359,6 +368,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                             variant="plain"
                                             selectedRow={selectedRow}
                                             onRowSelect={setSelectedRow}
+                                            zoomRange={zoomRange}
+                                            onZoom={setZoomRange}
                                         />
                                         <p className="text-sm text-gray-500 text-center">
                                             Row: Start Frame, Col: End Frame. Value: Average Text-Video Similarity.
@@ -374,6 +385,8 @@ export default function MainContent({ state, results }: MainContentProps) {
                                             variant="plain"
                                             selectedRow={selectedRow}
                                             onRowSelect={setSelectedRow}
+                                            zoomRange={zoomRange}
+                                            onZoom={setZoomRange}
                                         />
                                         <p className="text-sm text-gray-500 text-center">
                                             Row: Start Frame, Col: End Frame. Value: GIoU with Ground Truth.

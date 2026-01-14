@@ -15,6 +15,10 @@ export interface SimilarityChartProps {
     showCopyButton?: boolean;
     isCopied?: boolean;
     onCopy?: () => void;
+
+    // Zoom props
+    zoomRange?: { min: number; max: number } | null;
+    onZoom?: (range: { min: number; max: number } | null) => void;
 }
 
 export default function SimilarityChart({
@@ -27,11 +31,14 @@ export default function SimilarityChart({
     variant = 'card',
     showCopyButton = false,
     isCopied = false,
-    onCopy
+    onCopy,
+    zoomRange,
+    onZoom
 }: SimilarityChartProps) {
     const chartRef = useRef<HTMLCanvasElement | null>(null);
     const chartInstance = useRef<Chart | null>(null);
 
+    // Initialize/Update Chart
     useEffect(() => {
         const shouldShowChart =
             (results?.type === 'curve') ||
@@ -39,7 +46,9 @@ export default function SimilarityChart({
             (results?.type === 'dataset' && results?.curve);
 
         if (shouldShowChart && chartRef.current) {
-            // Destroy existing chart
+            // Destroy existing chart if data context completely changes or relies on non-updateable config
+            // However, for smoother updates, we might want to update data instead of destroy.
+            // For now, keep destroy/recreate pattern as it ensures config consistency (annotations etc).
             if (chartInstance.current) {
                 chartInstance.current.destroy();
             }
@@ -68,12 +77,20 @@ export default function SimilarityChart({
                         chartOptions.relevantWindows = relevantWindows;
                     }
 
+                    // Handle Zoom Complete (Outbound)
+                    if (onZoom) {
+                        chartOptions.onZoomComplete = (min, max) => {
+                            onZoom({ min, max });
+                        };
+                    }
+
                     const config = createSimilarityCurveConfig(
                         chartData.labels,
                         chartData.scores,
                         chartData.labelTitle,
                         chartOptions
                     );
+
                     chartInstance.current = new Chart(ctx, config);
                 }
             }
@@ -85,7 +102,68 @@ export default function SimilarityChart({
                 chartInstance.current = null;
             }
         };
-    }, [results, selectedRow, onPointClick, sourceATime, relevantWindows]);
+    }, [results, selectedRow, onPointClick, sourceATime, relevantWindows, onZoom /* Re-create if zoom handler changes */]);
+
+    // Handle External Zoom Changes (Inbound)
+    useEffect(() => {
+        const chart = chartInstance.current;
+        if (!chart) return;
+
+        if (zoomRange) {
+            // Programmatically zoom/pan to range
+            // We need to map time (seconds) to scale indices or values
+            // Our config uses labels array "0.0s", "0.5s".
+            // We need to find the specific labels or indices effectively.
+
+            // To make this robust, we should probably access the chart data to find indices
+            const dataLabels = chart.data.labels as string[];
+            if (!dataLabels) return;
+
+            // Simple map helper
+            const times = dataLabels.map(l => parseFloat(l.replace('s', '')));
+
+            // Find closest indices
+            let minIndex = 0;
+            let maxIndex = times.length - 1;
+
+            // Optimized scan or just simple scan
+            let minDiff = Infinity;
+            let maxDiff = Infinity;
+
+            times.forEach((t, i) => {
+                const dMin = Math.abs(t - zoomRange.min);
+                if (dMin < minDiff) { minDiff = dMin; minIndex = i; }
+
+                const dMax = Math.abs(t - zoomRange.max);
+                if (dMax < maxDiff) { maxDiff = dMax; maxIndex = i; }
+            });
+
+            // Apply zoom to x scale
+            if (chart.scales.x) {
+                const x = chart.scales.x;
+                // For category axis, we set min/max to indices (if configured as such) or values?
+                // Start with update options
+
+                // Use chartjs-plugin-zoom's zoomScale api if possible, or just set min/max options
+                x.options.min = minIndex;
+                x.options.max = maxIndex;
+                chart.update('none'); // Update without animation for sync feel
+            }
+        } else {
+            // Reset Zoom
+            chart.resetZoom();
+        }
+    }, [zoomRange]);
+
+    // Double click to reset
+    const handleDoubleClick = () => {
+        if (onZoom) {
+            onZoom(null); // Clear zoom state in parent
+        }
+        if (chartInstance.current) {
+            chartInstance.current.resetZoom();
+        }
+    };
 
     // Determine Title based on type
     const title = results?.type === 'curve' ? 'Similarity Curve' : 'Frame Similarity Detail';
@@ -123,10 +201,13 @@ export default function SimilarityChart({
             {/* Click instruction */}
             <p className="text-xs text-gray-400 mb-3">
                 <MousePointer2 size={12} className="inline mr-1" />
-                Click on any point to seek the video to that timestamp.
+                Click point to seek. Drag to zoom. Double-click to reset.
             </p>
 
-            <div className="relative h-64 w-full cursor-pointer">
+            <div
+                className="relative h-64 w-full cursor-pointer"
+                onDoubleClick={handleDoubleClick}
+            >
                 {/* Copy Button - top-right of chart */}
                 {showCopyButton && onCopy && (
                     <button
