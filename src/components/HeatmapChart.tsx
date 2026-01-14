@@ -262,7 +262,7 @@ export default function HeatmapChart({
             const rect = canvasRef.current.getBoundingClientRect();
 
             // Recalculate dimension maps to map pixels -> time
-            const totalRows = data.matrix.length;
+
             const totalCols = data.matrix[0].length;
             let colStart = 0, colEnd = totalCols;
 
