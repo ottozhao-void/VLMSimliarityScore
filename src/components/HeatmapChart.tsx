@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, MouseEvent } from 'react';
-import { Grid, MousePointer2, ZoomIn } from 'lucide-react';
+import { Grid, MousePointer2 } from 'lucide-react';
 
 export interface HeatmapData {
     matrix: (number | null)[][];
@@ -159,18 +159,7 @@ export default function HeatmapChart({
     }, [data, selectedRow, showUpperTriangle, zoomRange]);
 
     // Handle Interaction
-    const getCellFromCoords = (x: number, y: number) => {
-        if (!data || !canvasRef.current) return null;
 
-        const rect = canvasRef.current.getBoundingClientRect();
-        // Since x, y coming from params are relative to client or something?
-        // Let's assume standard event handling where we process events on container/canvas
-        // But we need to use the computed bounds.
-
-        // Actually this helper is called with event coordinates relative to the element?
-        // No, let's just do logic inline to be safe.
-        return null;
-    };
 
     const handleMouseMove = (e: MouseEvent) => {
         if (!data || !canvasRef.current) return;
@@ -313,8 +302,7 @@ export default function HeatmapChart({
             const cEndGlobal = Math.min(totalCols - 1, colStart + c2Rel);
 
             // Map to times
-            const tRow1 = data.rows_time[rStartGlobal];
-            const tRow2 = data.rows_time[rEndGlobal];
+
             const tCol1 = data.cols_time[cStartGlobal];
             const tCol2 = data.cols_time[cEndGlobal];
 
