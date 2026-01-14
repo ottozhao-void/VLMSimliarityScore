@@ -105,11 +105,16 @@ export default function HeatmapChart({
         const r = Math.floor(y / cellH);
 
         if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            const val = matrix[r][c];
             if (showUpperTriangle && r > c) {
                 setHoverInfo(null);
                 return;
             }
-            setHoverInfo({ r, c, val: matrix[r][c] });
+            if (val === null) {
+                setHoverInfo(null);
+            } else {
+                setHoverInfo({ r, c, val });
+            }
         } else {
             setHoverInfo(null);
         }
