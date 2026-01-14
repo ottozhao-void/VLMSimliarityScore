@@ -3,7 +3,7 @@ from PIL import Image
 import numpy as np
 from typing import List, Tuple
 
-def extract_frames(video_path: str, fps: int = 1) -> Tuple[List[Image.Image], List[float]]:
+def extract_frames(video_path: str, fps: float = 1.0) -> Tuple[List[Image.Image], List[float]]:
     """
     Extracts frames from video at specified FPS.
     

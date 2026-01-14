@@ -316,20 +316,20 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                                     <span className="text-[10px] text-gray-400">Frames per second for sampling</span>
                                 </div>
                                 <div className="px-2 py-1 bg-gray-50 border border-gray-100 rounded-md font-mono text-xs font-medium text-black">
-                                    {videoFps} FPS
+                                    {videoFps >= 1 ? `${videoFps} FPS` : `1 frame / ${(1 / videoFps).toFixed(0)}s`}
                                 </div>
                             </div>
                             <input
                                 type="range"
-                                min="1"
+                                min="0.5"
                                 max="30"
-                                step="1"
+                                step="0.5"
                                 value={videoFps}
-                                onChange={(e) => setVideoFps(parseInt(e.target.value))}
+                                onChange={(e) => setVideoFps(parseFloat(e.target.value))}
                                 className="w-full h-1.5 bg-gray-100 rounded-full appearance-none cursor-pointer accent-black hover:accent-gray-800"
                             />
                             <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                                <span>1 FPS</span>
+                                <span>0.5 FPS</span>
                                 <span>30 FPS</span>
                             </div>
                         </div>

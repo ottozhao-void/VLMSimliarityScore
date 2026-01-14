@@ -159,7 +159,7 @@ class VLMService:
         video_path: Optional[str],
         sigma: float,
         text_embed_type: str,
-        video_fps: int,
+        video_fps: float,
         batch_size: int = 4
     ) -> Tuple[torch.Tensor, Optional[List[float]], bool]:
         """

@@ -189,7 +189,7 @@ async def predict(
     reparam_sigma_b: float = Form(0.0),
     text_embed_type_a: str = Form("projected"),
     text_embed_type_b: str = Form("projected"),
-    video_fps: int = Form(1),
+    video_fps: float = Form(1.0),
     # DATASET:QVHighlights specific fields
     qv_query: Optional[str] = Form(None),
     qv_vid: Optional[str] = Form(None),
