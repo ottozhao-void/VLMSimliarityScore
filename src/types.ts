@@ -17,4 +17,9 @@ export interface AnalysisResults {
     matrix?: SimilarityMatrixCursor | null;
     best_frame?: FrameResult | null;
     time_taken_ms: number;
+
+    // Embedding vectors for display
+    embeddings_a?: number[][] | null;
+    embeddings_b?: number[][] | null;
+    embed_dim?: number | null;
 }

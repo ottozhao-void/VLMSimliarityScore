@@ -86,6 +86,9 @@ export default function App() {
                     modelStatusMsg={modelMsg}
                     onCalculate={handleCalculate}
                     calculating={calculating}
+                    embeddingsA={results?.embeddings_a}
+                    embeddingsB={results?.embeddings_b}
+                    embedDim={results?.embed_dim}
                 />
                 <MainContent
                     state={appState}

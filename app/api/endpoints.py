@@ -87,13 +87,21 @@ async def stream_video(filename: str):
 async def list_qvhighlights_queries(
     query: str = Query("", description="Fuzzy search query on query text"),
     limit: int = Query(50, ge=1, le=100, description="Max results"),
-    offset: int = Query(0, ge=0, description="Results offset")
+    offset: int = Query(0, ge=0, description="Results offset"),
+    windows_filter: str = Query("all", description="Filter by relevant_windows count: 'all', '=0', '=1', '=2', '>=3'")
 ):
     """
-    List QVHighlights dataset queries with optional fuzzy search.
+    List QVHighlights dataset queries with optional fuzzy search and filtering.
+    
+    windows_filter options:
+        - 'all': No filtering
+        - '=0': Exactly 0 relevant windows
+        - '=1': Exactly 1 relevant window
+        - '=2': Exactly 2 relevant windows
+        - '>=3': 3 or more relevant windows
     """
     try:
-        queries, total, has_more = QVHighlightsService.list_queries(query, limit, offset)
+        queries, total, has_more = QVHighlightsService.list_queries(query, limit, offset, windows_filter)
         return QVHighlightsQueryListResponse(
             queries=[
                 QVHighlightsQueryInfo(
@@ -257,6 +265,9 @@ async def predict(
                 matrix=matrix,
                 best_frame=best_frame,
                 average_score=curve_avg,
+                embeddings_a=video_embeds.tolist(),
+                embeddings_b=text_embeds.tolist(),
+                embed_dim=video_embeds.shape[-1],
                 time_taken_ms=duration_ms
             )
         
@@ -320,6 +331,9 @@ async def predict(
             matrix=matrix,
             best_frame=best_frame,
             average_score=avg_score,
+            embeddings_a=embeds_a.tolist(),
+            embeddings_b=embeds_b.tolist(),
+            embed_dim=embeds_a.shape[-1],
             time_taken_ms=duration_ms
         )
 

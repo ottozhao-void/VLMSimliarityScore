@@ -9,13 +9,23 @@ interface QVHighlightsQueryPickerProps {
     onSelect: (query: QVHighlightsQuery) => void;
 }
 
+// Filter options for relevant windows count
+const WINDOW_FILTER_OPTIONS = [
+    { value: 'all', label: 'All' },
+    { value: '=0', label: '=0' },
+    { value: '=1', label: '=1' },
+    { value: '=2', label: '=2' },
+    { value: '>=3', label: '≥3' },
+] as const;
+
 /**
  * Quick Switcher-style modal for selecting QVHighlights dataset queries.
- * Features fuzzy search, keyboard navigation, and infinite scroll.
+ * Features fuzzy search, relevant_windows filtering, keyboard navigation, and infinite scroll.
  */
 export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: QVHighlightsQueryPickerProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [windowsFilter, setWindowsFilter] = useState<string>('all');
 
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
@@ -28,18 +38,19 @@ export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: Q
         if (isOpen) {
             setSearchTerm('');
             setSelectedIndex(0);
+            setWindowsFilter('all');
             reset();
             // Trigger initial fetch
-            search('');
+            search('', 'all');
             setTimeout(() => inputRef.current?.focus(), 50);
         }
     }, [isOpen, reset, search]);
 
     // Handle search input change
     useEffect(() => {
-        search(searchTerm);
+        search(searchTerm, windowsFilter);
         setSelectedIndex(0);
-    }, [searchTerm, search]);
+    }, [searchTerm, windowsFilter, search]);
 
     // Scroll selected item into view
     useEffect(() => {
@@ -109,23 +120,47 @@ export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: Q
                 onKeyDown={handleKeyDown}
             >
                 {/* Search Header */}
-                <div className="flex items-center gap-3 p-4 border-b border-gray-100">
-                    <Search size={20} className="text-gray-400" />
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        placeholder="Search queries..."
-                        className="flex-1 text-lg bg-transparent outline-none placeholder:text-gray-400"
-                    />
-                    {loading && <Loader2 size={20} className="text-gray-400 animate-spin" />}
-                    <button
-                        onClick={onClose}
-                        className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <X size={18} />
-                    </button>
+                <div className="p-4 border-b border-gray-100">
+                    {/* Search Input Row */}
+                    <div className="flex items-center gap-3">
+                        <Search size={20} className="text-gray-400" />
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            placeholder="Search queries..."
+                            className="flex-1 text-lg bg-transparent outline-none placeholder:text-gray-400"
+                        />
+                        {loading && <Loader2 size={20} className="text-gray-400 animate-spin" />}
+                        <button
+                            onClick={onClose}
+                            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* Capsule Filter Buttons */}
+                    <div className="flex items-center gap-2 mt-3">
+                        <span className="text-xs text-gray-500 mr-1">Windows:</span>
+                        {WINDOW_FILTER_OPTIONS.map((option) => (
+                            <button
+                                key={option.value}
+                                onClick={() => setWindowsFilter(option.value)}
+                                className={`px-3 py-1 text-xs font-medium rounded-full transition-all duration-150 ${windowsFilter === option.value
+                                    ? 'bg-blue-500 text-white shadow-sm'
+                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                    }`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                        {/* Sample count - pushed to the right */}
+                        <span className="flex-1 text-right text-xs text-gray-500">
+                            {total} 条样本
+                        </span>
+                    </div>
                 </div>
 
                 {/* Results List */}
@@ -204,3 +239,4 @@ export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: Q
         </div>
     );
 }
+

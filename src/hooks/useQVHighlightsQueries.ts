@@ -7,14 +7,14 @@ export interface UseQVHighlightsQueriesResult {
     hasMore: boolean;
     loading: boolean;
     error: string | null;
-    search: (query: string) => void;
+    search: (query: string, windowsFilter?: string) => void;
     loadMore: () => void;
     reset: () => void;
 }
 
 /**
  * Hook for fetching and searching QVHighlights dataset queries.
- * Provides debounced search and pagination support.
+ * Provides debounced search, filtering by relevant_windows count, and pagination support.
  */
 export function useQVHighlightsQueries(debounceMs: number = 300): UseQVHighlightsQueriesResult {
     const [queries, setQueries] = useState<QVHighlightsQuery[]>([]);
@@ -27,9 +27,10 @@ export function useQVHighlightsQueries(debounceMs: number = 300): UseQVHighlight
 
     const debounceRef = useRef<number | null>(null);
     const currentQueryRef = useRef('');
+    const currentWindowsFilterRef = useRef('all');
     const limit = 50;
 
-    const fetchQueries = useCallback(async (searchQuery: string, searchOffset: number, append: boolean = false) => {
+    const fetchQueries = useCallback(async (searchQuery: string, windowsFilter: string, searchOffset: number, append: boolean = false) => {
         setLoading(true);
         setError(null);
 
@@ -37,10 +38,12 @@ export function useQVHighlightsQueries(debounceMs: number = 300): UseQVHighlight
             const params = new URLSearchParams({
                 query: searchQuery,
                 limit: String(limit),
-                offset: String(searchOffset)
+                offset: String(searchOffset),
+                windows_filter: windowsFilter
             });
 
             const res = await fetch(`/api/qvhighlights/queries?${params}`);
+
 
             if (!res.ok) {
                 const err = await res.json();
@@ -65,24 +68,25 @@ export function useQVHighlightsQueries(debounceMs: number = 300): UseQVHighlight
         }
     }, []);
 
-    const search = useCallback((newQuery: string) => {
+    const search = useCallback((newQuery: string, windowsFilter: string = 'all') => {
         // Clear any pending debounce
         if (debounceRef.current !== null) {
             clearTimeout(debounceRef.current);
         }
 
         currentQueryRef.current = newQuery;
+        currentWindowsFilterRef.current = windowsFilter;
 
         // Debounce the actual fetch
         debounceRef.current = window.setTimeout(() => {
             setOffset(0);
-            fetchQueries(newQuery, 0, false);
+            fetchQueries(newQuery, windowsFilter, 0, false);
         }, debounceMs);
     }, [debounceMs, fetchQueries]);
 
     const loadMore = useCallback(() => {
         if (!loading && hasMore) {
-            fetchQueries(currentQueryRef.current, offset, true);
+            fetchQueries(currentQueryRef.current, currentWindowsFilterRef.current, offset, true);
         }
     }, [loading, hasMore, offset, fetchQueries]);
 
@@ -93,6 +97,7 @@ export function useQVHighlightsQueries(debounceMs: number = 300): UseQVHighlight
         setOffset(0);
         setError(null);
         currentQueryRef.current = '';
+        currentWindowsFilterRef.current = 'all';
     }, []);
 
     // Cleanup on unmount
@@ -115,3 +120,4 @@ export function useQVHighlightsQueries(debounceMs: number = 300): UseQVHighlight
         reset
     };
 }
+

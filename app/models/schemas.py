@@ -25,6 +25,11 @@ class GenericAnalysisResponse(BaseModel):
     best_frame: Optional[FrameResult] = None # For curve mode
     average_score: Optional[float] = None # For curve/matrix mode
     
+    # Embedding vectors for display
+    embeddings_a: Optional[List[List[float]]] = None  # Source A embeddings [N, D]
+    embeddings_b: Optional[List[List[float]]] = None  # Source B embeddings [M, D]
+    embed_dim: Optional[int] = None  # Embedding dimension (e.g., 512 for CLIP)
+    
     time_taken_ms: float
 
 class ErrorResponse(BaseModel):

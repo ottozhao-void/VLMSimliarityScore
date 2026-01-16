@@ -35,9 +35,13 @@ interface SidebarProps {
     modelStatusMsg?: string;
     onCalculate: () => void;
     calculating: boolean;
+    // Embeddings from results
+    embeddingsA?: number[][] | null;
+    embeddingsB?: number[][] | null;
+    embedDim?: number | null;
 }
 
-export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMsg, onCalculate, calculating }: SidebarProps) {
+export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMsg, onCalculate, calculating, embeddingsA, embeddingsB, embedDim }: SidebarProps) {
     const {
         tab, setTab,
         sourceAType, setSourceAType,
@@ -161,6 +165,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             onQVPickerOpen={() => setQvPickerOpen(true)}
                             selectedQVQuery={selectedQVQuery}
                             onClearQVQuery={() => setSelectedQVQuery(null)}
+                            embedding={embeddingsA}
+                            embedDim={embedDim}
                         />
 
                         <div className="relative flex items-center py-2">
@@ -188,6 +194,8 @@ export default function Sidebar({ state, onLoadModel, modelStatus, modelStatusMs
                             onQVPickerOpen={() => setQvPickerOpen(true)}
                             selectedQVQuery={selectedQVQuery}
                             onClearQVQuery={() => setSelectedQVQuery(null)}
+                            embedding={embeddingsB}
+                            embedDim={embedDim}
                         />
 
                         {/* Sigma Slider (Conditional) */}

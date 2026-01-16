@@ -145,15 +145,22 @@ class QVHighlightsService:
         cls,
         query: str = "",
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
+        windows_filter: str = "all"
     ) -> Tuple[List[QVHighlightsQuery], int, bool]:
         """
-        List queries with optional fuzzy search.
+        List queries with optional fuzzy search and relevant_windows filtering.
         
         Args:
             query: Search string for fuzzy matching on query text (empty = all)
             limit: Maximum number of results to return
             offset: Number of results to skip (for pagination)
+            windows_filter: Filter by relevant_windows count:
+                - 'all': No filtering
+                - '=0': Exactly 0 relevant windows
+                - '=1': Exactly 1 relevant window
+                - '=2': Exactly 2 relevant windows
+                - '>=3': 3 or more relevant windows
             
         Returns:
             Tuple of (queries, total_count, has_more)
@@ -175,6 +182,17 @@ class QVHighlightsService:
             filtered = [q for _, q in scored]
         else:
             filtered = all_queries
+        
+        # Apply windows_filter
+        if windows_filter == "=0":
+            filtered = [q for q in filtered if len(q.relevant_windows) == 0]
+        elif windows_filter == "=1":
+            filtered = [q for q in filtered if len(q.relevant_windows) == 1]
+        elif windows_filter == "=2":
+            filtered = [q for q in filtered if len(q.relevant_windows) == 2]
+        elif windows_filter == ">=3":
+            filtered = [q for q in filtered if len(q.relevant_windows) >= 3]
+        # 'all' means no filtering
         
         total = len(filtered)
         paginated = filtered[offset:offset + limit]
