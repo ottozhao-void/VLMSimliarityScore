@@ -119,6 +119,37 @@ async def list_qvhighlights_queries(
         raise HTTPException(status_code=500, detail=f"Failed to list queries: {str(e)}")
 
 
+@router.get("/qvhighlights/random", response_model=QVHighlightsQueryInfo)
+async def get_random_qvhighlights_query(
+    windows_filter: str = Query("all", description="Filter by relevant_windows count: 'all', '=0', '=1', '=2', '>=3'")
+):
+    """
+    Get a random query from the QVHighlights dataset with optional filtering.
+    
+    windows_filter options:
+        - 'all': No filtering
+        - '=0': Exactly 0 relevant windows
+        - '=1': Exactly 1 relevant window
+        - '=2': Exactly 2 relevant windows
+        - '>=3': 3 or more relevant windows
+    """
+    try:
+        random_query = QVHighlightsService.get_random_query(windows_filter)
+        if random_query is None:
+            raise HTTPException(status_code=404, detail="No queries found matching the filter")
+        return QVHighlightsQueryInfo(
+            qid=random_query.qid,
+            query=random_query.query,
+            vid=random_query.vid,
+            duration=random_query.duration,
+            relevant_windows=random_query.relevant_windows
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get random query: {str(e)}")
+
+
 @router.get("/qvhighlights/stream/{vid}")
 async def stream_qvhighlights_video(vid: str):
     """

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import json
 import os
+import random
 from dataclasses import dataclass, field
 from fuzzywuzzy import fuzz
 
@@ -233,3 +234,43 @@ class QVHighlightsService:
         cls._cache_initialized = False
         cls._refresh_cache()
         return len(cls._cache or [])
+    
+    @classmethod
+    def get_random_query(
+        cls,
+        windows_filter: str = "all"
+    ) -> Optional[QVHighlightsQuery]:
+        """
+        Get a random query from the cached queries with optional filtering.
+        
+        Args:
+            windows_filter: Filter by relevant_windows count:
+                - 'all': No filtering
+                - '=0': Exactly 0 relevant windows
+                - '=1': Exactly 1 relevant window
+                - '=2': Exactly 2 relevant windows
+                - '>=3': 3 or more relevant windows
+            
+        Returns:
+            A random QVHighlightsQuery or None if no queries match the filter.
+        """
+        all_queries = cls._ensure_cache()
+        
+        # Apply windows_filter
+        if windows_filter == "=0":
+            filtered = [q for q in all_queries if len(q.relevant_windows) == 0]
+        elif windows_filter == "=1":
+            filtered = [q for q in all_queries if len(q.relevant_windows) == 1]
+        elif windows_filter == "=2":
+            filtered = [q for q in all_queries if len(q.relevant_windows) == 2]
+        elif windows_filter == ">=3":
+            filtered = [q for q in all_queries if len(q.relevant_windows) >= 3]
+        else:
+            # 'all' means no filtering
+            filtered = all_queries
+        
+        if not filtered:
+            return None
+        
+        return random.choice(filtered)
+

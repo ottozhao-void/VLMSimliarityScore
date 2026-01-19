@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Search, X, FileText, Loader2, Clock } from 'lucide-react';
+import { Search, X, FileText, Loader2, Clock, Dices } from 'lucide-react';
 import { useQVHighlightsQueries } from '../hooks/useQVHighlightsQueries';
 import { QVHighlightsQuery } from '../hooks/useAppState';
 
@@ -26,6 +26,7 @@ export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: Q
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [windowsFilter, setWindowsFilter] = useState<string>('all');
+    const [randomLoading, setRandomLoading] = useState(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
@@ -107,6 +108,29 @@ export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: Q
         }).join(', ');
     };
 
+    // Handle random query selection
+    const handleRandomQuery = useCallback(async () => {
+        setRandomLoading(true);
+        try {
+            const params = new URLSearchParams({
+                windows_filter: windowsFilter
+            });
+            const res = await fetch(`/api/qvhighlights/random?${params}`);
+            if (!res.ok) {
+                const err = await res.json();
+                console.error('Failed to get random query:', err.detail);
+                return;
+            }
+            const randomQuery = await res.json();
+            onSelect(randomQuery);
+            onClose();
+        } catch (err) {
+            console.error('Error fetching random query:', err);
+        } finally {
+            setRandomLoading(false);
+        }
+    }, [windowsFilter, onSelect, onClose]);
+
     if (!isOpen) return null;
 
     return (
@@ -156,6 +180,20 @@ export default function QVHighlightsQueryPicker({ isOpen, onClose, onSelect }: Q
                                 {option.label}
                             </button>
                         ))}
+                        {/* Random button */}
+                        <button
+                            onClick={handleRandomQuery}
+                            disabled={randomLoading || total === 0}
+                            className="ml-2 px-3 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center gap-1"
+                            title="随机选择一个 Query"
+                        >
+                            {randomLoading ? (
+                                <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                                <Dices size={12} />
+                            )}
+                            随机
+                        </button>
                         {/* Sample count - pushed to the right */}
                         <span className="flex-1 text-right text-xs text-gray-500">
                             {total} 条样本

@@ -13,7 +13,7 @@ This workflow commits changes, pushes to remote, and builds the frontend.
 git add .
 ```
 
-2. Commit with a message (replace `<message>` with your commit message):
+2. Commit with a message (the agent is responsible for summarizing the commit message):
 ```bash
 git commit -m "<message>"
 ```
